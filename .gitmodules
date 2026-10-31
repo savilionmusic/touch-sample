@@ -1,0 +1,3 @@
+[submodule "vendor/virtual-mpc-sample"]
+	path = vendor/virtual-mpc-sample
+	url = https://github.com/orrpunk-art/virtual-mpc-sample

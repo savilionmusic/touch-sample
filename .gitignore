@@ -1,0 +1,38 @@
+# Hard rule 1: no Akai firmware, extracted partitions, factory content, keys or credentials in git.
+firmware/
+*.img
+*.zip
+*.app/
+*.fit
+*.ext4
+*.raw
+*.qcow2
+part1
+part2
+parr
+
+# Sav's samples and SD card images
+sdcard/
+*.sdcard
+*.vfat
+
+# Keys and credentials
+*.pem
+*.key
+*.p12
+.env
+.env.*
+secrets/
+
+# mpc-sample-lab has no licence: kept locally, never committed (hard rule 7)
+vendor/mpc-sample-lab/
+
+# Hardware capture logs may hold raw device data; commit only curated profiles
+captures/raw/
+
+# Build output and OS noise
+.build/
+out/
+__pycache__/
+.DS_Store
+.idea/
