@@ -215,3 +215,9 @@ SwiftPM executable `TouchSampleApp` + `scripts/build-app.sh` that assembles `Tou
 prints the raw message of the next press so Sav can add it. Latency report (`--verbose`). Reconnect after unplug
 (CoreMIDI setup-changed notification -> reconnect -> startup + full LED refresh; WebSocket auto-reconnect every 1 s).
 `docs/MANUAL.md`.
+
+### Touch integration correction (Sav's test, 2026-10-31)
+
+The installed `mpc_touchd` supports PaperCut's mouseless CFMessagePort protocol, `com.savilion.papercut.touch`. Touch Sample registers a local receiver only after BridgeRunner's owner check. Each 24-byte packet contains Int32 type (1 press, 2 drag, 3 release), Int32 click count, and Double x/y in global top-left display points. The app converts to the Touch window's top-left viewport and delivers pointer events to the page, retaining the pressed target through release. It does not read USB, modify the driver, or move the Mac pointer. Stop releases the receiver. The name is retained for compatibility with the installed driver, not as an app identity.
+
+The page starts its AudioContext/worklet/PCM worker when its panel WebSocket opens; taps are a retry path. Native WebKit permits autoplay. The right-hand controls and SCREEN 1–3 softkeys are touch controls; the emulated Sample LCD is an image of the firmware display, which has no native touch protocol.
