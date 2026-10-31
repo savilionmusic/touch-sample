@@ -1,5 +1,9 @@
 # Hand-off: help build Touch Sample (for another coding assistant)
 
+**Current continuation:** Phase 5 and hardware testing have progressed beyond this original brief. Read
+[CLAUDE_AUDIO_HANDOFF.md](CLAUDE_AUDIO_HANDOFF.md) for the 2026-10-31 audio investigation, running trial, Git state,
+and rollback instructions. The remainder of this file is the historical starting brief.
+
 You are joining a project already in progress. Work in `~/Documents/Codex/TouchSample` on Sav's Mac (Apple Silicon,
 macOS 15, Swift 6 Command Line Tools, Python 3.12, no Xcode).
 
