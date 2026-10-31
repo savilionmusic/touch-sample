@@ -424,6 +424,13 @@
    "name": null
   },
   {
+   "id": 54,
+   "port": "public",
+   "verified": false,
+   "source": "LED in PaperCut's startup list (button note = LED id); press not seen yet",
+   "name": null
+  },
+  {
    "id": 55,
    "port": "public",
    "verified": true,
@@ -435,6 +442,13 @@
    "port": "public",
    "verified": true,
    "source": "PaperCut controller.log 'unmapped controller button'",
+   "name": null
+  },
+  {
+   "id": 122,
+   "port": "public",
+   "verified": false,
+   "source": "LED in PaperCut's startup list (button note = LED id); press not seen yet",
    "name": null
   }
  ],

@@ -126,9 +126,13 @@
   }
  },
  "spares": {
-  "_comment": "Touch buttons that touch-capture lists under 'spares' in the profile, with no entry above, get these Sample controls in order",
+  "_comment": "Profile spares (unnamed Touch buttons, lowest ID first) get these Sample controls in order until Sav names them",
   "order": [
-   "LOOP"
+   "CHOP",
+   "MUTE",
+   "LOOP",
+   "SAMPLE",
+   "SAMPLE SELECT"
   ]
  },
  "lights": {
