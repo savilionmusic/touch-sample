@@ -19,7 +19,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>com.savilion.touchsample</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleVersion</key><string>1</string>
-<key>CFBundleShortVersionString</key><string>0.6</string>
+<key>CFBundleShortVersionString</key><string>0.7</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>TouchSampleRoot</key><string>$ROOT_XML</string>
 <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>

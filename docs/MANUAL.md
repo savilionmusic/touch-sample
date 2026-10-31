@@ -45,6 +45,10 @@ The Touch uses the installed driver's existing direct-touch connection, so taps 
 
 For a friend with an Apple Silicon Mac and their own "MPC Sample 1.3.0 Updater" (no MPC Touch needed). The kit holds no Akai files; the friend's Mac builds the firmware images from the friend's own updater.
 
+**Sound delay (Buffer).** Smaller buffers cut delay but risk crackles; if it crackles, pick the next size up.
+- App: the **Buffer (frames)** menu in the main window (256 / 512 / 1024 / 2048 frames, about 6 / 12 / 23 / 46 ms of queue, default 1024). It changes at once, no restart, and is remembered.
+- Browser panel (friend setup): two menus at the bottom right of the page at http://127.0.0.1:8765/. **Sound buffer** (Auto = stock, or 256 / 384 / 512 / 1024 frames) and **Output** (Lowest = stock, Balanced, Safe). Changing one reloads the page; click the page once afterwards so sound starts. The choice is remembered by the browser. Auto is the stock adaptive buffer. The friend gets it by installing the newest kit (it is part of the repo).
+
 **Make the kit (Sav):** commit your changes, then run `scripts/make-friend-kit.sh`. It needs `vendor/virtual-mpc-sample/out/kernel/Image` and `out/bridge/mpclab-audio-bridge` (build them once with `lab.py build kernel bridge`). It writes `dist/Touch Sample Kit.zip` and refuses to build if a firmware file, disk image, key or SD card file is found, or if any file matches `inputs.sha256`. Send the zip.
 
 **Friend:** put the Akai updater (.zip or .app) on the Desktop, unzip the kit, right-click `Setup.command` and Open. It installs Homebrew and tools if missing, unpacks the project to `~/Documents/Codex/TouchSample`, clones the two emulator repositories at their pinned commits, extracts the firmware, builds the images (30-60 minutes) and puts `Start MPC Sample.command` on the Desktop. Running Setup again resumes. Samples go in `vendor/virtual-mpc-sample/sdcard/`. The Touch Sample app is for a Mac with an MPC Touch attached; the friend uses the Desktop shortcut and the browser page.

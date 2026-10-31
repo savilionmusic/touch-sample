@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(VENDOR, "panel"))
 import server  # noqa: E402  (the stock panel server)
 
 TOUCH_HTML = os.path.join(HERE, "touch.html")
+BUFFER_JS = os.path.join(HERE, "buffer_select.js")
 
 class _ThrottledVncSocket:
     """The stock VNC client's socket, but its incremental update requests (3, 1, ...) are spaced
@@ -185,6 +186,16 @@ class TouchPanel(server.Panel):
                     "vm": bool(self.connected)}
 
 
+def stock_page_with_selector():
+    """The stock panel page (read fresh, never edited on disk) with panel-ext/buffer_select.js injected first."""
+    with open(os.path.join(server.HERE, "index.html"), "rb") as f:
+        page = f.read()
+    with open(BUFFER_JS, "rb") as f:
+        tag = b"<script>" + f.read().replace(b"</script", b"<\\/script") + b"</script>"
+    i = page.lower().find(b"<head>")
+    return page[:i + 6] + tag + page[i + 6:] if i >= 0 else tag + page
+
+
 def make_touch_handler(panel, hub, *stock_args):
     """Stock handler (server.make_handler(panel, qmp, midi, rear, sd, vnc, pages, burst)) plus our routes."""
     burst = stock_args[-1]
@@ -253,6 +264,8 @@ def make_touch_handler(panel, hub, *stock_args):
             if path == "/touch":
                 with open(TOUCH_HTML, "rb") as f:
                     return self.reply(200, f.read(), "text/html; charset=utf-8")
+            if path in ("/", "/index.html") and not ws_req:
+                return self.reply(200, stock_page_with_selector(), "text/html; charset=utf-8")
             if path == "/bridge" and ws_req:
                 try:
                     return self._ws_loop("bridge", self._bridge_msg)
@@ -366,7 +379,9 @@ def selftest():
     assert out.startswith(b"HTTP/1.") and b" 200 " in out.split(b"\r\n")[0] and b"<canvas" in out, out[:200]
     out = get("/touch?sink=abc")
     assert b" 200 " in out.split(b"\r\n")[0]
-    assert b"MPC Sample" in get("/") or b"<html" in get("/").lower()
+    home = get("/")
+    assert b" 200 " in home.split(b"\r\n")[0] and b"ts-buffer" in home and b"tsBufferFrames" in home
+    assert b"class Player extends AudioWorkletProcessor" in home and home.lower().find(b"<script>") < home.find(b"class Player")
     hh = object.__new__(H)
     hh.headers = {}
     ui = FakeWs()
