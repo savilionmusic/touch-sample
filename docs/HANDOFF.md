@@ -42,7 +42,7 @@ Start only once `app/Package.swift` exists and `cd app && swift build -c release
 ## Resume point (2026-10-31 03:42, Claude low on usage)
 - Branches: `phase-0-emulator` (scripts, DESIGN.md) -> `phase-1-4-bridge-screen` (panel-ext, profile, mapping, spares). Not merged, not pushed.
 - Kernel build ran in the background (`python3 lab.py build kernel bridge`); next: `python3 lab.py build images` (needs Colima running).
-- Swift bridge in `app/` was being written by a Claude Sonnet agent; check `cd app && swift build -c release && .build/release/touch-bridge --self-test` before trusting it, then commit it on `phase-1-4-bridge-screen`.
+- Swift bridge in `app/` is built and committed (self-test 125/125). Not run on hardware yet.
 - Unnamed Touch buttons 0x34 0x36 0x37 0x43 0x7A are profile spares -> CHOP, MUTE, LOOP, SAMPLE, SAMPLE SELECT until Sav names them.
 - Then Phase 5 (this file's job list), then Sav's hardware test: run `scripts/run-lab.command` in Terminal.app, quit PaperCut/Koala, run `app/.build/release/touch-bridge`, open http://127.0.0.1:8765/touch on the Touch screen.
 - 03:45 update: kernel, audio bridge and disk images all built (`lab.py build images` needed an empty
