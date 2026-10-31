@@ -181,6 +181,7 @@ const act = (name, action, value) => {
 function connect() {
   ws = new WebSocket("ws://" + location.host + "/ws");
   ws.binaryType = "arraybuffer";
+  ws.onopen = () => { startAudio(); };
   ws.onclose = () => { ws = null; setTimeout(connect, 1000); };
   ws.onmessage = e => {
     if (typeof e.data === "string") return onState(JSON.parse(e.data));
@@ -303,6 +304,26 @@ for (const d of document.querySelectorAll(".fader")) {
   faders.push(f);
 }
 
+// ---------------------------------------------------------------- direct touches from the installed macOS driver
+// No global cursor events. Keep the pressed target even when a finger leaves it.
+let directTarget = null;
+window.touchSampleDirect = (type, x, y) => {
+  if (![1, 2, 3].includes(type) || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  const emit = (target, event, buttons) => target.dispatchEvent(new PointerEvent(event, {
+    bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true,
+    clientX: x, clientY: y, button: 0, buttons, pressure: buttons ? 1 : 0,
+  }));
+  if (type === 1) {
+    if (directTarget) emit(directTarget, "pointercancel", 0);
+    directTarget = document.elementFromPoint(x, y);
+    startAudio();
+    if (directTarget) emit(directTarget, "pointerdown", 1);
+  } else if (directTarget) {
+    if (type === 2) emit(directTarget, "pointermove", 1);
+    else { const target = directTarget; directTarget = null; emit(target, "pointerup", 0); }
+  }
+};
+
 // ---------------------------------------------------------------- /touchui: events, knob overlay, bridge status
 let tui = null, knobTimer = 0;
 function connectUi() {
@@ -413,7 +434,13 @@ async function startAudio() {
     audioWorker.postMessage({ port: ch.port2, url: "ws://" + location.hostname + ":" + pcmPort }, [ch.port2]);
     actx.onstatechange = showSound;
     if (actx.state !== "running") actx.resume();
-  } catch (e) { console.error("sound failed", e); actx = null; }
+  } catch (e) {
+    console.error("sound failed", e);
+    audioWorker?.terminate(); audioWorker = null;
+    if (actx) actx.close().catch(() => {});
+    actx = null; player = null;
+    $("soundBadge").textContent = "Sound failed — tap to retry";
+  }
   showSound();
 }
 function showSound() { $("soundBadge").style.display = actx && actx.state === "running" ? "none" : "block"; }

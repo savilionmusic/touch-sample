@@ -20,6 +20,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     var status: NSTextField!
     var screenStatus: NSTextField!
     var webView: WKWebView?
+    let directTouch = DirectTouchReceiver()
     var screenObserver: NSObjectProtocol?
     var chrome: NSButton!
     var bridge: BridgeRunner?
@@ -98,7 +99,10 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
         let config = WKWebViewConfiguration(); config.mediaTypesRequiringUserActionForPlayback = []
         let view = TouchWebView(frame: NSRect(origin: .zero, size: w.frame.size), configuration: config)
         view.autoresizingMask = [.width, .height]; view.navigationDelegate = self
-        w.contentView = view; webView = view; view.load(URLRequest(url: url))
+        w.contentView = view; webView = view
+        directTouch.log = { [weak self] in self?.note($0) }
+        if !directTouch.start(view) { note("Direct touch port unavailable: another receiver is running") }
+        view.load(URLRequest(url: url))
         positionTouch(); w.makeKeyAndOrderFront(nil); w.makeFirstResponder(view)
         screenStatus.stringValue = "Touch screen: loading Sample panel…"
     }
@@ -187,6 +191,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func stop() {
         guard !stopping else { return }; generation += 1; starting = false; stopping = true
         if let launcher = terminalLauncher, launcher.isRunning { launcher.terminate() }; terminalLauncher = nil
+        directTouch.stop()
         bridge?.stop(); bridge = nil; if let p = chromeProcess, p.isRunning { p.terminate() }; chromeProcess = nil; displayWindow?.close(); displayWindow = nil; webView = nil; screenStatus.stringValue = "Touch screen: stopped"; status.stringValue = "Saving and stopping…"
         let root = self.root
         DispatchQueue.global().async {
@@ -208,5 +213,6 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { terminationPending = true; if !stopping { stop() }; return .terminateLater }
     func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
 }
+if CommandLine.arguments.contains("--self-test") { DirectTouchReceiver.selfTest(); exit(0) }
 let app = NSApplication.shared
 let delegate = App(); app.delegate = delegate; app.run()
