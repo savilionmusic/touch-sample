@@ -19,6 +19,11 @@ final class NativeAudio {
     private var peak: Float = 0
     private var underruns = 0
     private var targetFrames = 2048
+    // The guest's audio clock and the Apollo's differ slightly (measured ~140 ppm fast), so the
+    // queue drifts once there are no xruns to reset it. Outside this band each packet is resampled
+    // by one frame (~0.4 %, linear) until the queue is back near target.
+    private var correcting = 0          // -1 shrinking, +1 stretching, 0 none
+    private var trimmed = 0, stretched = 0
     var log: (String) -> Void = { _ in }
 
     func start() throws {
@@ -36,7 +41,7 @@ final class NativeAudio {
             t.schedule(deadline: .now() + 2, repeating: 2)
             t.setEventHandler { [weak self] in
                 guard let self else { return }
-                self.log("NATIVE AUDIO received=\(self.framesReceived) frames queued=\(self.queued) peak=\(self.peak) playing=\(self.player.isPlaying) target=\(self.targetFrames) underruns=\(self.underruns)")
+                self.log("NATIVE AUDIO received=\(self.framesReceived) frames queued=\(self.queued) peak=\(self.peak) playing=\(self.player.isPlaying) target=\(self.targetFrames) underruns=\(self.underruns) trimmed=\(self.trimmed) stretched=\(self.stretched)")
                 self.peak = 0
             }
             timer = t; t.resume()
@@ -80,13 +85,36 @@ final class NativeAudio {
         }
         return buffer
     }
+    /// Linear resample of a whole packet to `frames` frames (used for one-frame drift steps).
+    static func resample(_ input: AVAudioPCMBuffer, to frames: Int, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+        let n = Int(input.frameLength)
+        guard n > 1, frames > 1, let src = input.floatChannelData,
+              let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(frames)),
+              let dst = out.floatChannelData else { return nil }
+        out.frameLength = AVAudioFrameCount(frames)
+        let step = Double(n - 1) / Double(frames - 1)
+        for i in 0..<frames {
+            let x = Double(i) * step, j = min(Int(x), n - 2), f = Float(x - Double(j))
+            for c in 0..<2 { dst[c][i] = src[c][j] + (src[c][j + 1] - src[c][j]) * f }
+        }
+        return out
+    }
     private func enqueue(_ data: Data, _ token: Int) {
         pending.append(data)
         let count = pending.count / 4 * 4
         guard count > 0 else { return }
         let packet = Data(pending.prefix(count)); pending = Data(pending.dropFirst(count))
         // Bound latency after host stalls; don't accumulate seconds of stale sound.
-        guard queued < 16384, let buffer = Self.decode(packet, format: format) else { return }
+        guard queued < 16384, var buffer = Self.decode(packet, format: format) else { return }
+        if player.isPlaying {
+            if queued > targetFrames + 1024 { correcting = -1 } else if queued < targetFrames - 1024 { correcting = 1 }
+            else if (correcting < 0 && queued <= targetFrames + 512) || (correcting > 0 && queued >= targetFrames - 512) { correcting = 0 }
+            let n = Int(buffer.frameLength)
+            if correcting != 0, n > 64, let r = Self.resample(buffer, to: n + correcting, format: format) {
+                buffer = r
+                if correcting < 0 { trimmed += 1 } else { stretched += 1 }
+            }
+        } else { correcting = 0 }
         let frames = Int(buffer.frameLength)
         framesReceived += frames
         if let channels = buffer.floatChannelData {
@@ -119,6 +147,14 @@ final class NativeAudio {
         precondition(abs(buffer.floatChannelData![1][0] - 32767.0 / 32768) < 0.00001)
         precondition(buffer.floatChannelData![0][1] == 0.5 && buffer.floatChannelData![1][1] == -0.5)
         precondition(decode(Data([1,2,3]), format: format) == nil)
-        print("Native PCM stereo, endianness, signed amplitude and malformed-frame checks passed (no audio device opened)")
+        let ramp = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 256)!; ramp.frameLength = 256
+        for i in 0..<256 { ramp.floatChannelData![0][i] = Float(i); ramp.floatChannelData![1][i] = -Float(i) }
+        for size in [255, 257] {
+            let r = resample(ramp, to: size, format: format)!
+            precondition(Int(r.frameLength) == size)
+            precondition(r.floatChannelData![0][0] == 0 && abs(r.floatChannelData![0][size - 1] - 255) < 0.001)
+            precondition(abs(r.floatChannelData![1][size / 2] + r.floatChannelData![0][size / 2]) < 0.001)
+        }
+        print("Native PCM stereo, endianness, signed amplitude and malformed-frame and drift-resample checks passed (no audio device opened)")
     }
 }
