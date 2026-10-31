@@ -63,7 +63,7 @@
    "send": "16 LEVELS"
   },
   "QLINK": {
-   "send": "KNOB FX"
+   "bridge": "qlinkBank"
   },
   "FULL LEVEL": {
    "bridge": "fullLevel"

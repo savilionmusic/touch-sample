@@ -38,7 +38,7 @@ is 18; the Phase 1 capture finds the rest (PaperCut's notes expect UNDO, COPY, M
 | Q-Link 4 | CC 19 (Public) | candidate | **FADER = CC 20** (pad volume) | Must remap: CC 19 on the Sample is MAIN VOLUME |
 | Shift + Q-Link 4 | | default | MAIN VOLUME = CC 19 | Q-Link bank LEDs show which one Q4 drives |
 | Q-Link touch 1–4 | notes 84–87 (`0x54–0x57`) | Q1 verified | not sent | The Sample has no knob touch. The `/touch` page shows that knob's name and value while touched |
-| Q-LINK button | note 0 | verified | KNOB FX = note 0 | Same ID, related job |
+| Q-LINK button | note 0 | verified | Cycle Q-Link bank A/B | Sav correction 2026-10-31: stays a bank button. A: Q4 FADER; B: Q4 MAIN VOLUME. Q1–Q3 remain K1–K3. Shift temporarily swaps Q4 to the other bank. KNOB FX remains on screen |
 | Data wheel turn | CC 100: `01` = right, `7F` = left | verified | same | Pass-through |
 | Data wheel push | note 111 (`0x6F`) | verified | same | Pass-through |
 | SHIFT | note 49 (`0x31`) | verified | same | Pass-through (see rule 5) |

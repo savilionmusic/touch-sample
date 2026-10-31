@@ -374,7 +374,13 @@ private func checkWheelAndButtons() throws {
     ck("UNDO -> CHOP (75), MINUS -> MINUS (55)", s.sampleSince(m) == [h("90 4B 7F"), h("80 4B 00"), h("90 37 7F"), h("80 37 00")], hexList(s.sampleSince(m)))
     m = s.mark()
     s.pub("90 00 7F"); s.pub("80 00 00")
-    ck("Q-LINK button (note 0) -> KNOB FX (note 0)", s.sampleSince(m) == [h("90 00 7F"), h("80 00 00")], hexList(s.sampleSince(m)))
+    ck("Q-LINK changes bank without sending a Sample control", s.sampleSince(m).isEmpty)
+    ck("Q-LINK bank B lights indicator 91", s.touch.contains { $0.bytes == h("B0 5B 02") })
+    m = s.mark(); s.pub("B0 13 40")
+    ck("Q4 in bank B drives MAIN VOLUME", s.sampleSince(m) == [h("B0 13 40")])
+    s.pub("90 00 7F"); s.pub("80 00 00")
+    m = s.mark(); s.pub("B0 13 40")
+    ck("Q-LINK cycles back to bank A FADER", s.sampleSince(m) == [h("B0 14 40")])
 }
 
 private func checkBanks() throws {

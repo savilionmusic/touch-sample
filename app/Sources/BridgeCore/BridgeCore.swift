@@ -27,6 +27,7 @@ public final class BridgeCore {
     private var parsers: [PortRole: MidiStreamParser] = [.public: MidiStreamParser(), .private: MidiStreamParser()]
     private var connected = false
     private var fullLevel = false
+    private var qlinkAlternate = false
     private var touchShift = false                      // SHIFT is held on the Touch
     private var sampleShift = false                     // what the Sample believes
     private var buttonDown: [String: Set<PortRole>] = [:]
@@ -310,7 +311,7 @@ public final class BridgeCore {
     /// The Sample control a Q-Link currently drives (Q4: FADER, or MAIN VOLUME while SHIFT is held).
     private func knobTarget(_ q: Int) -> String? {
         guard let e = mapping.knobs["Q\(q + 1)"] else { return nil }
-        if touchShift, let s = e.shift?.send { return s }
+        if (q == 3 ? qlinkAlternate != touchShift : touchShift), let s = e.shift?.send { return s }
         return e.send
     }
 
@@ -394,6 +395,8 @@ public final class BridgeCore {
                 t += 60
             }
             // Macros fire on press only; nothing to do on release.
+        } else if chosen.bridge == "qlinkBank" {
+            qlinkAlternate.toggle()
         } else if chosen.bridge == "fullLevel" {
             fullLevel.toggle()
         } else if chosen.bridge == "bank", let bank = chosen.bank {
