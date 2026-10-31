@@ -2,6 +2,10 @@
 
 Touch Sample runs the MPC Sample firmware in an emulator. Keep this project folder in place: the app uses the scripts, settings, and emulator alongside it. Your own samples belong in `vendor/virtual-mpc-sample/sdcard/`; there is no factory library.
 
+## Install
+
+Run `scripts/make-installer.sh` in Terminal. It builds the app and writes `Touch Sample 0.6 (date) Installer.pkg` to the Desktop. Double-click the package to put **Touch Sample.app** in `/Applications`. The package holds only the app: the emulator, your samples and the settings stay in `~/Documents/Codex/TouchSample`, and the installed app looks there (or at the folder it was built from). If it cannot find `vendor/virtual-mpc-sample/lab.py`, the window says which path it expected. The Desktop alias can point to `/Applications/Touch Sample.app` instead of `dist/Touch Sample.app`. Quit the app before installing a newer package.
+
 ## Start and play
 
 1. Connect the MPC Touch and quit PaperCut, Koala Link, Koala and Akai MPC. Only one app can own the Touch.

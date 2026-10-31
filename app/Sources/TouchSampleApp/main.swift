@@ -13,7 +13,9 @@ final class TouchWebView: WKWebView {
 }
 
 final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler {
-    let root = URL(fileURLWithPath: Bundle.main.bundlePath).deletingLastPathComponent().deletingLastPathComponent().path
+    // Emulator folder: next to dist/ when run from the repo, else the build-time path in Info.plist (TouchSampleRoot), else the default home.
+    let resolvedRoot = App.resolveRoot(bundlePath: Bundle.main.bundlePath, plistRoot: Bundle.main.object(forInfoDictionaryKey: "TouchSampleRoot") as? String, home: NSHomeDirectory())
+    var root: String { resolvedRoot.path }
     let url = URL(string: "http://127.0.0.1:8765/touch?audio=native")!
     var window: NSWindow!
     var displayWindow: NSWindow?
@@ -32,6 +34,35 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     var stopping = false
     var terminationPending = false
 
+    static let rootMarker = "/vendor/virtual-mpc-sample/lab.py"
+    static func resolveRoot(bundlePath: String, plistRoot: String?, home: String) -> (path: String, found: Bool) {
+        let bundleRelative = URL(fileURLWithPath: bundlePath).deletingLastPathComponent().deletingLastPathComponent().path
+        let fallback = home + "/Documents/Codex/TouchSample"
+        for candidate in [bundleRelative, plistRoot, fallback].compactMap({ $0 }) where FileManager.default.fileExists(atPath: candidate + rootMarker) { return (candidate, true) }
+        return (fallback, false)
+    }
+    var rootMissingMessage: String { "Emulator folder not found. Expected " + (root as NSString).abbreviatingWithTildeInPath + App.rootMarker }
+    static func selfTest() {
+        let fm = FileManager.default
+        let base = NSTemporaryDirectory() + "touchsample-root-test-\(ProcessInfo.processInfo.processIdentifier)"
+        defer { try? fm.removeItem(atPath: base) }
+        func make(_ name: String) -> String {
+            let dir = base + "/" + name
+            try! fm.createDirectory(atPath: dir + "/vendor/virtual-mpc-sample", withIntermediateDirectories: true)
+            fm.createFile(atPath: dir + rootMarker, contents: Data())
+            return dir
+        }
+        let repo = make("repo"), plist = make("plist"), home = base + "/home"
+        let installed = "/Applications/Touch Sample.app"
+        let fallback = make("home/Documents/Codex/TouchSample")
+        precondition(App.resolveRoot(bundlePath: repo + "/dist/Touch Sample.app", plistRoot: plist, home: home) == (repo, true))
+        precondition(App.resolveRoot(bundlePath: installed, plistRoot: plist, home: home) == (plist, true))
+        precondition(App.resolveRoot(bundlePath: installed, plistRoot: base + "/gone", home: home) == (fallback, true))
+        precondition(App.resolveRoot(bundlePath: installed, plistRoot: nil, home: home) == (fallback, true))
+        try! fm.removeItem(atPath: fallback + rootMarker)
+        precondition(App.resolveRoot(bundlePath: installed, plistRoot: nil, home: home) == (fallback, false))
+        print("Emulator folder resolution checks passed (bundle path, then Info.plist, then home default, else not found)")
+    }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         let menu = NSMenu(); let item = NSMenuItem(); menu.addItem(item)
@@ -53,13 +84,15 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
         screenObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in self?.positionTouch() }
         note("Displays: " + NSScreen.screens.map { "\($0.localizedName): \($0.frame)" }.joined(separator: "; "))
         let conflicts = OwnerCheck.check()
-        if !conflicts.isEmpty { status.stringValue = "Quit first: " + conflicts.joined(separator: ", ") }
+        if !resolvedRoot.found { fail(rootMissingMessage) }
+        else if !conflicts.isEmpty { status.stringValue = "Quit first: " + conflicts.joined(separator: ", ") }
         else { DispatchQueue.main.async { self.start() } }
     }
     @objc func saveSetting() { UserDefaults.standard.set(chrome.state == .on, forKey: "chrome") }
     @objc func soundSettings() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension")!) }
     func screen() -> NSScreen? { NSScreen.screens.first { $0.localizedName.localizedCaseInsensitiveContains("MPC Touch") } ?? NSScreen.screens.first { $0 != NSScreen.screens.first && Int($0.frame.width) == 1280 && Int($0.frame.height) == 800 } }
     func note(_ message: String) {
+        guard resolvedRoot.found else { return }  // Don't create out/ in a folder that isn't the emulator's.
         let folder = URL(fileURLWithPath: root).appendingPathComponent("out")
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let file = folder.appendingPathComponent("app.log")
@@ -122,6 +155,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func pageFailed(_ error: Error) { screenStatus.stringValue = "Touch screen failed: \(error.localizedDescription)"; note(screenStatus.stringValue) }
     @objc func start() {
         guard !starting && !stopping && bridge == nil else { return }
+        guard resolvedRoot.found else { fail(rootMissingMessage); return }
         let conflicts = OwnerCheck.check(); guard conflicts.isEmpty else { fail("Quit first: " + conflicts.joined(separator: ", ")); return }
         guard screen() != nil else { fail("MPC Touch display not found."); return }
         if chrome.state == .off { makeTouchWindow() }
@@ -226,6 +260,6 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { terminationPending = true; if !stopping { stop() }; return .terminateLater }
     func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
 }
-if CommandLine.arguments.contains("--self-test") { DirectTouchReceiver.selfTest(); NativeAudio.selfTest(); exit(0) }
+if CommandLine.arguments.contains("--self-test") { DirectTouchReceiver.selfTest(); NativeAudio.selfTest(); App.selfTest(); exit(0) }
 let app = NSApplication.shared
 let delegate = App(); app.delegate = delegate; app.run()
