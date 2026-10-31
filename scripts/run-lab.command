@@ -29,7 +29,8 @@ fi
 trap '[ -n "$SERVER_PID" ] && kill "$SERVER_PID" 2>/dev/null' EXIT
 
 echo "Touch screen page: http://127.0.0.1:8765/touch   stock panel: http://127.0.0.1:8765/"
-# Audio trial: two vCPUs that poll when idle (see lab-ext/qemu-tune). Override from Terminal, e.g.
-# TS_QEMU_SMP=4 TS_GUEST_IDLE_POLL=0 to get the stock VM back.
-export TS_QEMU_SMP="${TS_QEMU_SMP:-2}" TS_GUEST_IDLE_POLL="${TS_GUEST_IDLE_POLL:-1}"
+# Optional VM tuning for audio trials (see lab-ext/qemu-tune), off by default, e.g.
+# TS_QEMU_SMP=2 TS_GUEST_IDLE_POLL=1. The 2-vCPU idle-poll trial sounded worse to Sav.
+# Real-time vCPU threads are on by default for the current trial; TS_QEMU_RT=0 turns them off.
+export TS_QEMU_SMP="${TS_QEMU_SMP:-}" TS_GUEST_IDLE_POLL="${TS_GUEST_IDLE_POLL:-0}" TS_QEMU_RT="${TS_QEMU_RT:-1}"
 PATH="$ROOT/lab-ext/qemu-tune:$PATH" python3 lab.py run "$@"

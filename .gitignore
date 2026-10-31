@@ -38,3 +38,4 @@ __pycache__/
 .idea/
 
 dist/
+lab-ext/qemu-tune/rtboost.dylib

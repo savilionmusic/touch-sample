@@ -4,7 +4,10 @@
 #   TS_GUEST_IDLE_POLL=1 append "nohlt" to the guest kernel command line, so idle vCPUs poll
 #                        instead of executing WFI. That removes the host sleep/wake round trip
 #                        for each guest timer tick, at the cost of one busy host core per vCPU.
+#   TS_QEMU_RT=1         load rtboost.dylib so vCPU threads get the macOS real-time policy
+#                        (adds -name debug-threads=on so the threads can be found by name).
 set -euo pipefail
+here="$(cd "$(dirname "$0")" && pwd)"
 args=()
 while (($#)); do
   if [[ "$1" == '-smp' && -n "${TS_QEMU_SMP:-}" ]]; then
@@ -15,4 +18,11 @@ while (($#)); do
     args+=("$1"); shift
   fi
 done
+if [[ "${TS_QEMU_RT:-0}" == 1 ]]; then
+  if [[ ! -f "$here/rtboost.dylib" || "$here/rtboost.c" -nt "$here/rtboost.dylib" ]]; then
+    clang -O2 -Wall -dynamiclib -o "$here/rtboost.dylib" "$here/rtboost.c"
+  fi
+  [[ " ${args[*]} " == *" -name "* ]] || args+=('-name' 'mpc-sample,debug-threads=on')
+  export DYLD_INSERT_LIBRARIES="$here/rtboost.dylib"
+fi
 exec /opt/homebrew/bin/qemu-system-aarch64 "${args[@]}"

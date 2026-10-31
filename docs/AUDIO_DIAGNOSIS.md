@@ -32,3 +32,9 @@ The restored four-vCPU configuration recorded 21 guest xruns in a ten-second sam
 ## Idle-poll trial (2026-10-31, Claude)
 
 One-vCPU baseline right before this trial: 34 guest playback xruns in 10 s (268 -> 302), and `hw_ptr` kept resetting, so the Sample's watchdog was restarting the stream. Theory: under HVF an idle guest vCPU executes WFI and QEMU sleeps the host thread until the next guest timer; macOS wakes it late (wakelat saw up to 17.8 ms against a ~7 ms playback queue). The lab kernel has `nohlt`, which makes idle vCPUs poll instead, so timer ticks no longer need a host wakeup. `lab-ext/qemu-tune` adds it and sets the vCPU count (trial default: 2 vCPUs, costing about two busy host cores). `scripts/xrun-rate.sh` measures the rate read-only. Stock VM: `TS_QEMU_SMP=4 TS_GUEST_IDLE_POLL=0`. First result, 2 vCPUs with idle polling: 2, 6, 0 and 3 xruns in four 10 s samples (about 3 per 10 s, down from 21 on stock 4 vCPUs and 34 on 1 vCPU). QEMU used about 197% CPU. Fewer, not zero; listening result pending.
+
+Listening result for the 2-vCPU idle-poll trial: Sav reported it sounded worse. The native host counter rose while QEMU held two busy cores, so the launcher default went back to the stock VM.
+
+## Real-time vCPU trial (2026-10-31, Claude)
+
+Pro Tools and SoundFlow were not running; WindowServer (~35%) and DisplayLink (~29%) were the busiest host processes beside QEMU (~32%). `lab-ext/qemu-tune/rtboost.c` is injected into QEMU with `DYLD_INSERT_LIBRARIES` (Homebrew QEMU is ad-hoc signed, no hardened runtime) and gives the `CPU n/HVF` threads the macOS time-constraint policy (1 ms period, 0.5 ms budget, preemptible), so they are not woken late behind WindowServer/DisplayLink. Tested on a dummy process: the named thread ran at priority 97R, the others stayed at 31. `TS_QEMU_RT=0` turns it off. Result: not yet measured.
