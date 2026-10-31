@@ -558,9 +558,9 @@ private func checkLights() throws {
        Set(fullLeds.map { "\($0.0.label) \(hexString($0.1))" }) == Set(latest.values) && fullLeds.count == latest.count
         && fullLeds.contains { $0.1 == h("B0 52 02") } && fullLeds.contains { $0.1 == h("B0 27 00") },
        "\(fullLeds.count) vs \(latest.count)")
-    ck("refreshLights: no startup SysEx, pad colours follow the LEDs",
+    ck("refreshLights: no startup SysEx, pad colours follow the LEDs (all 16 pads once: the Sample's colour, black for the rest)",
        rf.startups == startupsBefore && full.contains { $0.1 == h("F0 47 7F 37 65 00 04 00 0A 14 1E F7") }
-        && full.filter({ $0.1.first == 0xF0 }).count == 1)
+        && full.filter({ $0.1.first == 0xF0 }).count == 16 && full.filter({ $0.1.first == 0xF0 }).allSatisfy { $0.0 == .public })
     ck("refreshLights: Private only gets B0 23..26 / B0 5A..5D, at most 8 messages",
        fullLeds.filter { $0.0 == .private }.count <= 8 && fullLeds.filter { $0.0 == .private }.allSatisfy { (0x23...0x26).contains($0.1[1]) || (0x5A...0x5D).contains($0.1[1]) },
        "\(fullLeds.filter { $0.0 == .private }.map { hexString($0.1) })")
@@ -571,6 +571,7 @@ private func checkLights() throws {
     ck("refreshLights(litOnly:) re-sends only the lit LEDs (PLAY, bank A both ports), not the off ones",
        !lit.isEmpty && lit.count < fullLeds.count && lit.allSatisfy { $0.1[2] != 0 } && lit.contains { $0.1 == h("B0 52 02") }
         && lit.contains { $0.0 == .private && $0.1 == h("B0 23 03") } && !lit.contains { $0.1 == h("B0 27 00") }, "\(lit.count)")
+    ck("refreshLights(litOnly:) (the 8 s refresh) sends no pad colours", rf.touchSince(rm).filter { $0.1.first == 0xF0 }.isEmpty)
     rf.led(999, 2); rf.led(126, 1)
     rm = rf.mark()
     rf.run(rf.core.refreshLights())
@@ -600,6 +601,114 @@ private func checkLights() throws {
     let nl = Sim("no-lights", BridgeCore(config: try testConfig(), lights: false))
     nl.run(nl.core.start()); nl.connect(); nl.led(82, 2)
     ck("--no-lights: no startup, no LED output at all", nl.touch.isEmpty && nl.startups == 0)
+}
+
+/// Pad colours: the exact bytes (PaperCut fb4885e, PadLights.swift), the index mapping, clamping, what is sent when.
+private func checkPadColours() throws {
+    // PaperCut TouchControlMap.padNotes (Instrument.swift): light index i is slot i of this table
+    let paperCutPadNotes = [0x25, 0x24, 0x2a, 0x52, 0x28, 0x26, 0x2e, 0x2c, 0x30, 0x2f, 0x2d, 0x2b, 0x31, 0x37, 0x33, 0x35]
+    let shipped = try BridgeConfig(profileJSON: sharedJSON!.profile, mappingJSON: sharedJSON!.mapping,
+                                   controlsJSON: sharedJSON!.controls)
+    ck("pad colours: enabled in the shipped profile, product 0x37, index map is identity 0...15",
+       shipped.profile.padColour.enabled && shipped.profile.padColour.product == 0x37 && shipped.profile.padColour.indexMap == Array(0..<16))
+    var touchNotes = [Int](), sampleNotes = [Int]()
+    let sampleControls = sharedJSON!.controls["controls"] as! [String: Any]
+    for n in 1...16 {
+        touchNotes.append(shipped.profile.controls.first { $0.name == "PAD \(n)" }?.id ?? -1)
+        sampleNotes.append((sampleControls["PAD \(n)"] as? [String: Any])?["id"] as? Int ?? -2)
+    }
+    ck("pad colours: Touch pad n plays note PaperCut's table slot n-1 (pad numbering = PaperCut's light index)", touchNotes == paperCutPadNotes, "\(touchNotes)")
+    ck("pad colours: Sample pad n has the same note as Touch pad n, so colour index i lands on the pad that plays Sample pad i+1", sampleNotes == touchNotes, "\(sampleNotes)")
+
+    // exact bytes, all 16 pads, three different colours per pad, 7-bit
+    let s = try fresh("pad colours")
+    var exact = true, detail = ""
+    for i in 0..<16 {
+        let r = (i * 8) % 128, g = (127 - i * 7) % 128, b = (i * 3 + 1) % 128
+        let m = s.mark()
+        s.sampleEvent(.pad(i: i, rgb: [r, g, b]))
+        let got = s.touchSince(m)
+        let want = h(String(format: "F0 47 7F 37 65 00 04 %02X %02X %02X %02X F7", i, r, g, b))
+        if got.count != 1 || got[0].0 != .public || got[0].1 != want || got[0].1.count != 12 { exact = false; detail += " pad \(i): \(got.map { hexString($0.1) })" }
+    }
+    ck("pad colours: F0 47 7F 37 65 00 04 <pad> R G B F7 for pads 0...15, one message each, Public only", exact, detail)
+
+    // clamp to 0...127 and malformed input
+    var m = s.mark()
+    s.sampleEvent(.pad(i: 2, rgb: [300, -5, 127]))
+    ck("pad colours: components clamp to 0...127", s.touchSince(m).map { $0.1 } == [h("F0 47 7F 37 65 00 04 02 7F 00 7F F7")], "\(s.touchSince(m).map { hexString($0.1) })")
+    m = s.mark()
+    s.sampleEvent(.pad(i: 16, rgb: [1, 2, 3]))      // the Sample's "extra LED" index
+    s.sampleEvent(.pad(i: 99, rgb: [1, 2, 3]))
+    s.sampleEvent(.pad(i: -1, rgb: [1, 2, 3]))
+    s.sampleEvent(.pad(i: 4, rgb: [1, 2]))
+    ck("pad colours: Sample index 16 (extra LED), out-of-range indices and short colours send nothing", s.touchSince(m).isEmpty, "\(s.touchSince(m).map { hexString($0.1) })")
+    var allSent = [UInt8]()
+    for t in s.touch where t.1.first == 0xF0 { allSent.append(t.1[7]) }
+    ck("pad colours: the pad index byte is always 0...15", !allSent.isEmpty && allSent.allSatisfy { $0 <= 15 })
+
+    // connect: all 16 pads once, in order, black where the Sample reported nothing
+    let c = Sim("pad connect", BridgeCore(config: try testConfig()))
+    c.run(c.core.start())
+    c.sampleEvent(.hello(leds: [57: 1], pads: [3: [0x7F, 0x28, 0], 12: [1, 2, 3]], vm: true))
+    let cm = c.mark()
+    c.connect()
+    let conn = c.touchSince(cm).filter { $0.1.first == 0xF0 }
+    ck("pad colours: on connect all 16 pads are sent once, 0...15 in order, black where the Sample reported none",
+       conn.count == 16 && conn.map { $0.1[7] } == Array(0..<16).map { UInt8($0) }
+        && conn.contains { $0.1 == h("F0 47 7F 37 65 00 04 03 7F 28 00 F7") } && conn.contains { $0.1 == h("F0 47 7F 37 65 00 04 0C 01 02 03 F7") }
+        && conn.filter { $0.1[8...10].allSatisfy { $0 == 0 } }.count == 14, "\(conn.count)")
+    // nothing changes -> nothing more
+    let before = c.touch.count
+    c.sampleEvent(.hello(leds: [57: 1], pads: [3: [0x7F, 0x28, 0], 12: [1, 2, 3]], vm: true))
+    c.sampleEvent(.pad(i: 3, rgb: [0x7F, 0x28, 0]))
+    c.sampleEvent(.pad(i: 7, rgb: [0, 0, 0]))
+    ck("pad colours: only changes are sent (a repeated or already-black colour is not)", c.touch.count == before)
+    c.sampleEvent(.pad(i: 7, rgb: [0, 0, 1]))
+    ck("pad colours: a changed pad sends just that pad", c.touch.count == before + 1 && c.touch.last!.1 == h("F0 47 7F 37 65 00 04 07 00 00 01 F7"))
+
+    // refreshes: full = all 16 again (<= 16 x 20 ms = 320 ms), lit-only (the 8 s refresh) = none, reconnect = all 16
+    var rm = c.mark()
+    c.run(c.core.refreshLights())
+    let full = c.touchSince(rm).filter { $0.1.first == 0xF0 }
+    ck("pad colours: refreshLights() re-sends all 16 pads (at most 320 ms of output)", full.count == 16 && full.count * 20 <= 320, "\(full.count)")
+    ck("pad colours: the refresh keeps the current colours (pad 3 orange, pad 7 blue)",
+       full.contains { $0.1 == h("F0 47 7F 37 65 00 04 03 7F 28 00 F7") } && full.contains { $0.1 == h("F0 47 7F 37 65 00 04 07 00 00 01 F7") })
+    rm = c.mark()
+    c.run(c.core.refreshLights(litOnly: true))
+    c.run(c.core.refreshLights(litOnly: true))
+    ck("pad colours: the periodic lit-only refresh sends no pad colours", c.touchSince(rm).filter { $0.1.first == 0xF0 }.isEmpty)
+    c.sampleEvent(.pad(i: 9, rgb: [5, 5, 5]))
+    rm = c.mark()
+    c.run(c.core.refreshLights(litOnly: true))
+    ck("pad colours: ... and a change made earlier is not repeated by it", c.touchSince(rm).filter { $0.1.first == 0xF0 }.isEmpty)
+    c.run(c.core.touchDisconnected())
+    rm = c.mark()
+    c.sampleEvent(.pad(i: 1, rgb: [9, 9, 9]))
+    ck("pad colours: nothing is sent while the Touch is away", c.touchSince(rm).isEmpty)
+    c.connect()
+    let again = c.touchSince(rm).filter { $0.1.first == 0xF0 }
+    ck("pad colours: reconnect sends all 16 again with the latest colours (pad 1, pad 9)",
+       again.count == 16 && again.contains { $0.1 == h("F0 47 7F 37 65 00 04 01 09 09 09 F7") } && again.contains { $0.1 == h("F0 47 7F 37 65 00 04 09 05 05 05 F7") })
+
+    // off
+    let off = try fresh("pad colours off", padColour: false)
+    let om = off.mark()
+    off.run(off.core.refreshLights()); off.run(off.core.stop())
+    ck("pad colours: with padColour.enabled false nothing pad-related is sent, on refresh or on stop", off.touchSince(om).allSatisfy { $0.1.first == 0xB0 })
+
+    // an index map that is not 16 entries of 0...15 is ignored (identity stays)
+    var prof = sharedJSON!.profile
+    var pc = prof["padColour"] as! [String: Any]
+    pc["indexMap"] = [15, 14, 13]
+    prof["padColour"] = pc
+    ck("pad colours: a malformed indexMap in the profile is ignored", try TouchProfile(json: prof).padColour.indexMap == Array(0..<16))
+    pc["indexMap"] = Array(0..<15) + [16]
+    prof["padColour"] = pc
+    ck("pad colours: an indexMap entry above 15 is ignored too", try TouchProfile(json: prof).padColour.indexMap == Array(0..<16))
+    pc["indexMap"] = Array((0..<16).reversed())
+    prof["padColour"] = pc
+    ck("pad colours: a valid permutation is honoured", try TouchProfile(json: prof).padColour.indexMap == Array((0..<16).reversed()))
 }
 
 private func checkDisconnectAndStop() throws {
@@ -634,6 +743,18 @@ private func checkDisconnectAndStop() throws {
        tt.contains { $0.1 == h("B0 52 00") } && tt.contains { $0.1 == h("B0 15 00") } && tt.contains { $0.1 == h("B0 31 00") }
         && tt.contains { $0.0 == .private && $0.1 == h("B0 23 00") } && tt.contains { $0.0 == .private && $0.1 == h("B0 5B 00") })
     ck("stop: pad colours back to black", tt.contains { $0.1 == h("F0 47 7F 37 65 00 04 01 00 00 00 F7") })
+    let stopPads = tt.filter { $0.1.first == 0xF0 }
+    ck("stop: all 16 pads are sent off (Public, 0...15 once each), like PaperCut's allOff",
+       stopPads.count == 16 && stopPads.allSatisfy { $0.0 == .public } && stopPads.map { $0.1 } == (0..<16).map { h(String(format: "F0 47 7F 37 65 00 04 %02X 00 00 00 F7", $0)) },
+       "\(stopPads.count)")
+    let idleStop = try fresh("stop with no pad ever coloured")
+    let ism = idleStop.mark()
+    idleStop.run(idleStop.core.stop())
+    ck("stop: pads are cleared even if the bridge never saw a colour (a previous owner may have left some)",
+       idleStop.touchSince(ism).filter { $0.1.first == 0xF0 }.count == 16)
+    let offline = Sim("stop while Touch absent", BridgeCore(config: try testConfig()))
+    offline.run(offline.core.start()); offline.run(offline.core.stop())
+    ck("stop while the Touch is not connected sends nothing to it", offline.touch.isEmpty)
     ck("stop: only lit LEDs are touched (FULL LEVEL stays untouched)", !tt.contains { $0.1 == h("B0 27 00") })
 }
 
@@ -690,6 +811,17 @@ private func checkPacing() {
        "sent \(sent5.count), coalesced \(out2.snapshot.coalesced)")
     let padSent = rec2.items.filter { $0.bytes.first == 0xF0 }
     ck("queued colour updates for the same pad are coalesced", padSent.count == 1 && padSent[0].bytes == h("F0 47 7F 37 65 00 04 03 09 09 09 F7"))
+
+    // 16 pads at once (a connect or a full refresh) go out one per 20 ms; a second refresh while they wait adds nothing
+    let rec3 = Rec()
+    let out3 = PacedOutput(send: { rec3.add($0, $1); return 0 }, startup: { 0 })
+    for _ in 0..<2 { for i in 0..<16 { out3.enqueue(.public, h(String(format: "F0 47 7F 37 65 00 04 %02X 10 20 30 F7", i))) } }
+    ck("16 pad colours drain", out3.flush(timeout: 3))
+    let pads3 = rec3.items.filter { $0.bytes.first == 0xF0 }
+    let gaps3 = zip(pads3.dropFirst(), pads3).map { Double($0.ns - $1.ns) / 1e6 }
+    ck("a second full pad refresh queued behind the first is coalesced (16 pads, plus at most the one already on its way), each >= 20 ms after the last",
+       pads3.count >= 16 && pads3.count <= 17 && (gaps3.min() ?? 0) >= 19.5 && Double(pads3.last!.ns - pads3.first!.ns) / 1e6 >= 15 * 19.5 && out3.snapshot.coalesced >= 15,
+       "\(pads3.count) sent, \(out3.snapshot.coalesced) coalesced, min gap \(gaps3.min() ?? 0) ms")
 }
 
 private func checkOwnerCheck() {
@@ -734,6 +866,7 @@ func runSelfTest(_ options: BridgeOptions) -> Int32 {
         try checkBanks()
         try checkUnknown()
         try checkLights()
+        try checkPadColours()
         try checkDisconnectAndStop()
         try checkHardRuleLayer()
         checkPacing()

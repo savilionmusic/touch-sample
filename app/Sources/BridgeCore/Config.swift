@@ -75,7 +75,8 @@ public struct TouchProfile {
         if let pc = json["padColour"] as? [String: Any] {
             padColour.enabled = (pc["enabled"] as? Bool) ?? false
             padColour.product = (pc["product"] as? Int) ?? 0x37
-            if let m = pc["indexMap"] as? [Int], !m.isEmpty { padColour.indexMap = m }
+            // Sample pad i -> Touch pad index (0-15). Anything but 16 entries in 0-15 is ignored (identity stays).
+            if let m = pc["indexMap"] as? [Int], m.count == 16, m.allSatisfy({ (0...15).contains($0) }) { padColour.indexMap = m }
         }
     }
 }

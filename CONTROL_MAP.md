@@ -4,6 +4,8 @@ Sources, 2026-10-30:
 - **Touch** = PaperCut (`~/Documents/Codex/PaperCut`): `app/Sources/MPCApp/Instrument.swift` (`TouchControlMap`,
   `MIDIInput.consume`), `app/Sources/MPCRealtime/ControllerSetup.c`, `outputs/mpc-app-plan/CONTROL_MAP.md`,
   `outputs/mpc-touch-research/RESEARCH.md`, `docs/handoffs/GPT_CONTEXT.md` "Hardware facts".
+  Pad colours: PaperCut commit `fb4885e` (branch `fix/bugs-batch-2`, copy `~/Documents/Codex/PaperCut-bf2`),
+  `app/Sources/MPCApp/PadLights.swift`, hardware-tested on Sav's Touch 2026-10-30. Read-only reference, never edited.
 - **Sample** = `virtual-mpc-sample/panel/controls.json` and `docs/PANEL.md` (protocol verified on hardware 2026-10-22).
 
 Status: **verified** = measured on Sav's Touch (PaperCut). **candidate** = from the MPC Live/X map or a code
@@ -81,7 +83,7 @@ SCREEN 1–3 row. Not verified on the Touch hardware.
 |---|---|---|---|
 | `B0 id state` for a button | button LED: 0 off, 1 dim, ≥2 lit; bicolour = 3·A+B | `B0 id value` on **Public** for the mapped Touch button (same ID where shared: 49, 82, 81, 73, 80, 53, 40, 11, 9, 0) | Touch form verified for 0x27/0x28 and the boot set (0x31 0x34 0x43 0x7A 0x36 0x52 0x51 0x49 0x50 0x53 0x35); other IDs Phase 1 |
 | `B0 57..64 state` | pad bank A–H | Touch bank LEDs CC 35–38 (`0x23–0x26`), value 3 lit / 0 off. E–H proposed: same LED at 1 (dim) | verified form (value 3) |
-| `F0 47 7F 5C 65 00 04 pad R G B F7` | pad colour, 7-bit RGB | `F0 47 7F 37 65 00 04 pad' R G B F7` (product `5C → 37`) | **candidate**: Koala claims it works; never reproduced on this Mac. Test numbering and port (Public) in Phase 1 |
+| `F0 47 7F 5C 65 00 04 pad R G B F7` | pad colour, 7-bit RGB. `pad` 0–15 = Sample pad 1–16 of the current bank; 16 is the Sample's extra LED and is dropped | `F0 47 7F 37 65 00 04 pad R G B F7` on **Public** (product `5C → 37`; `pad` unchanged, `indexMap` = identity), components clamped to 0–127 | **verified** by PaperCut `fb4885e` (branch `fix/bugs-batch-2`, `PadLights.swift`): hand-tested on Sav's Touch 2026-10-30, all 16 pads light, index 0 = pad 1. Pads of the 16 the Sample has not coloured are sent black. Sent on connect and on the 0.7 s / 1.5 s refreshes (all 16, one per 20 ms, 320 ms), afterwards only the pads that changed; the 8 s lit-only refresh sends none; all 16 go off when the bridge stops |
 | `F0 47 7F 5C 42 00 00 F7` | start request; the panel server answers with MAIN VOLUME | not forwarded | the panel server already handles it |
 | — (bridge state) | Q-Link bank LEDs CC 90–93 (`0x5A–0x5D`), value 2 lit | first LED = Q4 on FADER, second = Q4 on MAIN VOLUME | verified form |
 | — (bridge state) | FULL LEVEL LED, note 39 (`0x27`) | 2 when the bridge's full velocity is on | verified |
@@ -92,3 +94,17 @@ SCREEN 1–3 row. Not verified on the Touch hardware.
 On Public, in this order, once: `F0 47 7F 37 62 00 01 65 F7` (unlock), `F0 47 00 37 64 00 01 01 F7` (gate),
 `F0 47 00 37 64 00 03 00 01 01 F7` (backlight / display on). Then LED baseline. Nothing else, nothing on Private
 except what PaperCut already sends. Never send `0x5A`.
+
+Everything else the bridge may write to the Touch, all of it already used by PaperCut (the C layer refuses the rest):
+- Public: `B0 id v` button LEDs; the pad-colour SysEx `F0 47 7F 37 65 00 04 <pad 0–15> R G B F7` (colours 0–127,
+  verified by PaperCut `fb4885e`, `PadLights.swift`; one per pad, never in a burst: the Touch keeps only the first of
+  a burst, so each leaves 20 ms after the last, per-pad updates still queued are coalesced, and only changed pads are
+  sent). No other SysEx besides the three above, and never one with `0x5A`.
+- Private: only `B0 23..26` and `B0 5A..5D`, no SysEx.
+
+Pad numbering: the pad-colour index is the pad's slot in the pad note table (`37 36 42 82 40 38 46 44 48 47 45 43 49
+55 51 53`, the Touch's PAD 1–16 and the Sample's PAD 1–16 alike; PaperCut `TouchControlMap.padNotes`, whose `PadLights`
+index is the same slot, and "pad 1 bottom-left, as on the MPC"). So Sample pad i+1 → index i → the Touch pad that plays
+that sound. The Sample's bank does not change the index: the 16 Touch pads always play the Sample's current bank and the
+colour frame only carries pads 0–15. Only index 0 = pad 1 was looked at by hand in PaperCut; the order of the other 15
+follows from the table and still needs Sav's eyes.

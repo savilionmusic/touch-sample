@@ -143,12 +143,14 @@ public final class BridgeCore {
     /// Sends the LED state (and pad colours, when enabled) again from scratch, as after a connect but without the
     /// startup SysEx. The Touch can drop writes made while it is still starting; PaperCut re-sends too. Same messages
     /// as the baseline (`B0 id v` on the ports in `bankLedPorts` for bank LEDs, Public otherwise). `litOnly` leaves
-    /// out the LEDs that are off, which keeps the periodic refresh short.
+    /// out the LEDs that are off, which keeps the periodic refresh short, and leaves the pad colours alone: a full
+    /// refresh re-sends all 16 pads (16 x 20 ms = 320 ms of output), which the periodic 8 s one must not do. PaperCut
+    /// never re-sends pad colours on a timer either; it sends the pads that changed.
     public func refreshLights(litOnly: Bool = false) -> [Effect] {
         guard lightsEnabled, connected else { return [] }
         sentLeds = [:]
-        sentPads = [:]
         if litOnly { for (key, v) in desiredLeds() where v == 0 { sentLeds[key] = 0 } }
+        else { sentPads = [:] }
         return finish([])
     }
 
@@ -161,7 +163,7 @@ public final class BridgeCore {
         return finish(out)
     }
 
-    /// Bridge stop: releases (SHIFT last), every lit LED back to 0, pads black.
+    /// Bridge stop: releases (SHIFT last), every lit LED back to 0, all 16 pads black.
     public func stop() -> [Effect] {
         var out = releaseAll()
         if lightsEnabled && connected {
@@ -170,7 +172,9 @@ public final class BridgeCore {
                 sentLeds[key] = 0
             }
             if profile.padColour.enabled {
-                for i in sentPads.keys.sorted() where sentPads[i] != [0, 0, 0] {
+                // All 16 pads off, whatever we think they show (PaperCut's PadLights.allOff does the same), so no
+                // colour is left lit on the Touch after the bridge has gone.
+                for i in 0..<profile.padColour.indexMap.count {
                     if let s = padColourSysEx(i, [0, 0, 0]) { out.append(.toTouch(.public, s)) }
                     sentPads[i] = [0, 0, 0]
                 }
@@ -200,10 +204,10 @@ public final class BridgeCore {
             sampleLeds[id] = v
             if bankLedIds.contains(id) { bankTouched = true }
         case .pad(let i, let rgb):
-            samplePads[i] = rgb.prefix(3).map { max(0, min(127, $0)) }
+            if rgb.count >= 3 { samplePads[i] = rgb.prefix(3).map { max(0, min(127, $0)) } }
         case .hello(let leds, let pads, _):
             sampleLeds = leds
-            samplePads = pads.mapValues { $0.prefix(3).map { max(0, min(127, $0)) } }
+            samplePads = pads.filter { $0.value.count >= 3 }.mapValues { $0.prefix(3).map { max(0, min(127, $0)) } }
             bankTouched = true
         case .vm(let connected):
             out.append(.log("Sample panel UART \(connected ? "attached" : "detached")"))
@@ -575,12 +579,23 @@ public final class BridgeCore {
         return want
     }
 
-    /// `F0 47 7F <product> 65 00 04 <index> R G B F7` (Public).
+    /// `F0 47 7F <product> 65 00 04 <pad 0-15> R G B F7` (Public only), the form PaperCut's PadLights sends
+    /// (product 0x37; colours 0-127, clamped). `pad` is the Sample's pad index 0-15; `padColour.indexMap` turns it
+    /// into the Touch's pad index (identity: see CONTROL_MAP.md). Anything outside 0-15, such as the Sample's "extra
+    /// LED" index 16, produces nothing.
     private func padColourSysEx(_ pad: Int, _ rgb: [Int]) -> [UInt8]? {
         let map = profile.padColour.indexMap
-        guard pad >= 0, pad < map.count, rgb.count >= 3 else { return nil }
+        guard pad >= 0, pad < map.count, (0...15).contains(map[pad]), rgb.count >= 3 else { return nil }
         func b(_ v: Int) -> UInt8 { UInt8(max(0, min(127, v))) }
-        return [0xF0, 0x47, 0x7F, b(profile.padColour.product), 0x65, 0x00, 0x04, b(map[pad]), b(rgb[0]), b(rgb[1]), b(rgb[2]), 0xF7]
+        return [0xF0, 0x47, 0x7F, b(profile.padColour.product), 0x65, 0x00, 0x04, UInt8(map[pad]), b(rgb[0]), b(rgb[1]), b(rgb[2]), 0xF7]
+    }
+
+    /// What the 16 Touch pads should show: the Sample's colour for pad i, or black when it has not reported one
+    /// (PaperCut's first `show` sends all 16, off ones included, which also wipes any colour a previous owner left).
+    private func desiredPads() -> [Int: [Int]] {
+        var want = [Int: [Int]]()
+        for i in 0..<profile.padColour.indexMap.count { want[i] = samplePads[i] ?? [0, 0, 0] }
+        return want
     }
 
     private func syncLights() -> [Effect] {
@@ -592,10 +607,12 @@ public final class BridgeCore {
             sentLeds[key] = want[key]
         }
         if profile.padColour.enabled {
-            for i in samplePads.keys.sorted() where sentPads[i] != samplePads[i] {
-                if let s = padColourSysEx(i, samplePads[i]!) {
+            // Only the pads whose colour changed since the last send (all 16 after a connect or a full refresh).
+            let pads = desiredPads()
+            for i in pads.keys.sorted() where sentPads[i] != pads[i] {
+                if let s = padColourSysEx(i, pads[i]!) {
                     out.append(.toTouch(.public, s))
-                    sentPads[i] = samplePads[i]
+                    sentPads[i] = pads[i]
                 }
             }
         }

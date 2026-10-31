@@ -149,9 +149,13 @@ Lights (Sample -> Touch):
 - Q-Link bank LEDs CC 90–93: 90 = 2 while Q4 drives FADER, 91 = 2 while it drives MAIN VOLUME.
 - MAIN/MENU (proposed): MAIN lit (2) when SAMPLE's LED >= 2, dim (1) when SEQ's is; MENU lit for SAMPLE SELECT, dim for
   PAD FX. Only if the profile has their LED ids.
-- Pad colour -> `F0 47 7F 37 65 00 04 <indexMap[pad]> R G B F7` on Public, if `padColour.enabled` in the profile.
-- After (re)connect: startup SysEx, then every known Touch LED to its current value (paced), then pad colours.
-- On stop: every LED we lit back to 0, pads black (paced).
+- Pad colour -> `F0 47 7F 37 65 00 04 <indexMap[pad]> R G B F7` on Public, if `padColour.enabled` in the profile
+  (enabled; verified by PaperCut `fb4885e`). `indexMap` must be 16 entries in 0–15 (identity by default); pad indices
+  above 15 (the Sample's extra LED, 16) are dropped. Pads the Sample has not coloured are black.
+- After (re)connect: startup SysEx, then every known Touch LED to its current value (paced), then all 16 pad colours.
+  The 0.7 s and 1.5 s refreshes send everything again (pads included: 16 x 20 ms); the 8 s lit-only refresh sends
+  lit LEDs only and no pads. Between those, only pads whose colour changed are sent.
+- On stop: every LED we lit back to 0, all 16 pads black (paced).
 
 ### touch-capture (Phase 1 CLI, run by Sav in Terminal.app)
 

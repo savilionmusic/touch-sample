@@ -64,7 +64,7 @@ public final class PacedOutput {
     /// Key used for coalescing: the same LED CC, or the same pad's colour.
     static func coalesceKey(_ bytes: [UInt8]) -> String? {
         if bytes.count == 3, bytes[0] == 0xB0 { return "cc\(bytes[1])" }
-        if bytes.count >= 12, bytes[0] == 0xF0, bytes[4] == 0x65, bytes[6] == 0x04 { return "pad\(bytes[7])" }
+        if bytes.count == 12, bytes[0] == 0xF0, bytes[4] == 0x65, bytes[5] == 0x00, bytes[6] == 0x04 { return "pad\(bytes[7])" }
         return nil
     }
 

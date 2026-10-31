@@ -463,7 +463,7 @@
   "private"
  ],
  "padColour": {
-  "enabled": false,
+  "enabled": true,
   "port": "public",
   "product": 55,
   "indexMap": [
@@ -484,7 +484,7 @@
    14,
    15
   ],
-  "verified": false,
-  "_comment": "Candidate: F0 47 7F 37 65 00 04 pad R G B F7. touch-capture leds tests it and sets enabled."
+  "verified": true,
+  "_comment": "F0 47 7F 37 65 00 04 <pad 0-15> R G B F7 (colours 0-127), Public port, pad 0 = pad 1. Hardware-tested on Sav's Touch 2026-10-30 by PaperCut (branch fix/bugs-batch-2, commit fb4885e, app/Sources/MPCApp/PadLights.swift); all 16 lit, one message per pad 20 ms apart (a burst keeps only the first). indexMap is identity: Sample pad i -> Touch pad index i, because PaperCut's light index i is its pad note table slot i (37 36 42 82 ...), the same notes as PAD 1-16 above."
  }
 }
