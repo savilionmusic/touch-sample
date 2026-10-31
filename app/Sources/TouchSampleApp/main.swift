@@ -192,8 +192,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
             guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") else { fail("Google Chrome not found. Stop, then choose WKWebView."); return }
             let process = Process(); process.executableURL = appURL.appendingPathComponent("Contents/MacOS/Google Chrome")
             process.arguments = ["--user-data-dir=\(NSTemporaryDirectory())touchsample-chrome-\(ProcessInfo.processInfo.processIdentifier)", "--app=http://127.0.0.1:8765/touch", "--window-position=\(Int(screen.frame.minX)),\(Int(NSScreen.screens[0].frame.maxY - screen.frame.maxY))", "--window-size=\(Int(screen.frame.width)),\(Int(screen.frame.height))"]
-            do { try process.run(); chromeProcess = process } catch { status.stringValue = "Chrome: \(error)" }
-
+            // The saved "Use Chrome" choice skips WKWebView and native audio; say so instead of staying silent.
+            do { try process.run(); chromeProcess = process; screenStatus.stringValue = "Touch screen: Chrome window (WKWebView and native audio are off; untick \"Use Chrome\", Stop, then Start)"; note(screenStatus.stringValue) } catch { fail("Chrome: \(error)") }
         } else {
             loadTouchPage()
         }
