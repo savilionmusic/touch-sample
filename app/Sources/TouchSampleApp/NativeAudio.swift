@@ -18,7 +18,7 @@ final class NativeAudio {
     private var framesReceived = 0
     private var peak: Float = 0
     private var underruns = 0
-    private var targetFrames = 4096
+    private var targetFrames = 2048
     var log: (String) -> Void = { _ in }
 
     func start() throws {
@@ -98,11 +98,7 @@ final class NativeAudio {
             self.queue.async {
                 guard self.active, token == self.generation else { return }
                 self.queued = max(0, self.queued - frames)
-                if self.queued == 0, self.player.isPlaying {
-                    self.underruns += 1
-                    self.targetFrames = min(8192, self.targetFrames + 512)
-                    self.player.pause() // wait for a useful cushion before resuming
-                }
+                if self.queued == 0, self.player.isPlaying { self.underruns += 1 }
             }
         }
         if !player.isPlaying, queued >= targetFrames { player.play() }
