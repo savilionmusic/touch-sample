@@ -45,3 +45,6 @@ Start only once `app/Package.swift` exists and `cd app && swift build -c release
 - Swift bridge in `app/` was being written by a Claude Sonnet agent; check `cd app && swift build -c release && .build/release/touch-bridge --self-test` before trusting it, then commit it on `phase-1-4-bridge-screen`.
 - Unnamed Touch buttons 0x34 0x36 0x37 0x43 0x7A are profile spares -> CHOP, MUTE, LOOP, SAMPLE, SAMPLE SELECT until Sav names them.
 - Then Phase 5 (this file's job list), then Sav's hardware test: run `scripts/run-lab.command` in Terminal.app, quit PaperCut/Koala, run `app/.build/release/touch-bridge`, open http://127.0.0.1:8765/touch on the Touch screen.
+- 03:45 update: kernel, audio bridge and disk images all built (`lab.py build images` needed an empty
+  `vendor/virtual-mpc-sample/overlay/lab-layer/root/.ssh/` folder: upstream git drops empty dirs). The emulator is
+  ready to run: Sav opens `scripts/run-lab.command` in Terminal.app.
