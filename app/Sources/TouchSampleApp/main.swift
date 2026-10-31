@@ -12,9 +12,9 @@ final class TouchWebView: WKWebView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate {
+final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKScriptMessageHandler {
     let root = URL(fileURLWithPath: Bundle.main.bundlePath).deletingLastPathComponent().deletingLastPathComponent().path
-    let url = URL(string: "http://127.0.0.1:8765/touch")!
+    let url = URL(string: "http://127.0.0.1:8765/touch?audio=native")!
     var window: NSWindow!
     var displayWindow: NSWindow?
     var status: NSTextField!
@@ -24,6 +24,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     var screenObserver: NSObjectProtocol?
     var chrome: NSButton!
     var bridge: BridgeRunner?
+    var nativeAudio: NativeAudio?
     var chromeProcess: Process?
     var terminalLauncher: Process?
     var generation = 0
@@ -97,6 +98,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
         makeTouchWindow()
         guard let w = displayWindow else { fail("Touch display unavailable"); return }
         let config = WKWebViewConfiguration(); config.mediaTypesRequiringUserActionForPlayback = []
+        config.userContentController.add(self, name: "audioDiagnostics")
         let view = TouchWebView(frame: NSRect(origin: .zero, size: w.frame.size), configuration: config)
         view.autoresizingMask = [.width, .height]; view.navigationDelegate = self
         w.contentView = view; webView = view
@@ -113,6 +115,10 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { pageFailed(error) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { pageFailed(error) }
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { pageFailed(NSError(domain: "Touch Sample page process stopped", code: 1)) }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "audioDiagnostics", let data = try? JSONSerialization.data(withJSONObject: message.body, options: [.sortedKeys]), let text = String(data: data, encoding: .utf8) else { return }
+        note("AUDIO " + text)
+    }
     func pageFailed(_ error: Error) { screenStatus.stringValue = "Touch screen failed: \(error.localizedDescription)"; note(screenStatus.stringValue) }
     @objc func start() {
         guard !starting && !stopping && bridge == nil else { return }
@@ -176,11 +182,16 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
         }
         runner.onStateChange = { [weak self] state in DispatchQueue.main.async { self?.status.stringValue = "Bridge: \(state.socketConnected ? "connected" : "offline") · Touch: \(state.touchConnected ? "connected" : "waiting")" } }
         do { try runner.start(); bridge = runner } catch { fail("Bridge: \(error)"); return }
+        if chrome.state == .off {
+            let audio = NativeAudio()
+            audio.log = { [weak self] text in DispatchQueue.main.async { self?.note(text) } }
+            do { try audio.start(); nativeAudio = audio } catch { fail("Native audio failed: \(error.localizedDescription)"); return }
+        }
         starting = false
         if chrome.state == .on {
             guard let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") else { fail("Google Chrome not found. Stop, then choose WKWebView."); return }
             let process = Process(); process.executableURL = appURL.appendingPathComponent("Contents/MacOS/Google Chrome")
-            process.arguments = ["--user-data-dir=\(NSTemporaryDirectory())touchsample-chrome-\(ProcessInfo.processInfo.processIdentifier)", "--app=\(url.absoluteString)", "--window-position=\(Int(screen.frame.minX)),\(Int(NSScreen.screens[0].frame.maxY - screen.frame.maxY))", "--window-size=\(Int(screen.frame.width)),\(Int(screen.frame.height))"]
+            process.arguments = ["--user-data-dir=\(NSTemporaryDirectory())touchsample-chrome-\(ProcessInfo.processInfo.processIdentifier)", "--app=http://127.0.0.1:8765/touch", "--window-position=\(Int(screen.frame.minX)),\(Int(NSScreen.screens[0].frame.maxY - screen.frame.maxY))", "--window-size=\(Int(screen.frame.width)),\(Int(screen.frame.height))"]
             do { try process.run(); chromeProcess = process } catch { status.stringValue = "Chrome: \(error)" }
 
         } else {
@@ -191,7 +202,9 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func stop() {
         guard !stopping else { return }; generation += 1; starting = false; stopping = true
         if let launcher = terminalLauncher, launcher.isRunning { launcher.terminate() }; terminalLauncher = nil
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "audioDiagnostics")
         directTouch.stop()
+        nativeAudio?.stop(); nativeAudio = nil
         bridge?.stop(); bridge = nil; if let p = chromeProcess, p.isRunning { p.terminate() }; chromeProcess = nil; displayWindow?.close(); displayWindow = nil; webView = nil; screenStatus.stringValue = "Touch screen: stopped"; status.stringValue = "Saving and stopping…"
         let root = self.root
         DispatchQueue.global().async {
@@ -213,6 +226,6 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { terminationPending = true; if !stopping { stop() }; return .terminateLater }
     func windowShouldClose(_ sender: NSWindow) -> Bool { NSApp.terminate(nil); return false }
 }
-if CommandLine.arguments.contains("--self-test") { DirectTouchReceiver.selfTest(); exit(0) }
+if CommandLine.arguments.contains("--self-test") { DirectTouchReceiver.selfTest(); NativeAudio.selfTest(); exit(0) }
 let app = NSApplication.shared
 let delegate = App(); app.delegate = delegate; app.run()
