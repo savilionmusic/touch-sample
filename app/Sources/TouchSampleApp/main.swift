@@ -36,7 +36,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     @objc func saveSetting() { UserDefaults.standard.set(chrome.state == .on, forKey: "chrome") }
     @objc func soundSettings() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension")!) }
-    func screen() -> NSScreen? { NSScreen.screens.first { $0.localizedName.localizedCaseInsensitiveContains("MPC Touch") } ?? NSScreen.screens.first { $0 != NSScreen.main && Int($0.frame.width) == 1280 && Int($0.frame.height) == 800 } }
+    func screen() -> NSScreen? { NSScreen.screens.first { $0.localizedName.localizedCaseInsensitiveContains("MPC Touch") } ?? NSScreen.screens.first { $0 != NSScreen.screens.first && Int($0.frame.width) == 1280 && Int($0.frame.height) == 800 } }
     func fail(_ message: String) { starting = false; status.stringValue = message }
     @objc func start() {
         guard !starting && !stopping && bridge == nil else { return }
@@ -81,7 +81,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate {
         } else {
             let config = WKWebViewConfiguration(); config.mediaTypesRequiringUserActionForPlayback = []
             let view = WKWebView(frame: screen.frame, configuration: config); view.load(URLRequest(url: url))
-            let w = NSWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen); w.contentView = view; w.setFrame(screen.frame, display: true); w.makeKeyAndOrderFront(nil); displayWindow = w
+            let w = NSWindow(contentRect: screen.frame, styleMask: .borderless, backing: .buffered, defer: false, screen: screen); w.contentView = view; w.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 1); w.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]; w.hidesOnDeactivate = false; w.isReleasedWhenClosed = false; w.setFrame(screen.frame, display: true); w.makeKeyAndOrderFront(nil); displayWindow = w
         }
     }
     @objc func stopButton() { stop() }
