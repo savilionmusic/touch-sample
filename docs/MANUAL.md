@@ -6,7 +6,7 @@ Touch Sample runs the MPC Sample firmware in an emulator. Keep this project fold
 
 1. Connect the MPC Touch and quit PaperCut, Koala Link, Koala and Akai MPC. Only one app can own the Touch.
 2. Build the app with `scripts/build-app.sh` in Terminal, then open `dist/Touch Sample.app`. Choose the Mac's output or the Touch audio interface in Sound Settings. The app uses the system default output.
-3. Click Start. If needed, the app opens `scripts/run-lab.command` in Terminal and waits for the panel. Leave that Terminal session open. When the Touch screen appears, tap it if the page asks for sound. Close other panel pages, since only one page can play the emulator's audio.
+3. The app starts automatically when no conflicting controller app is running. Use Start to retry after a stop or a conflict. If needed, the app opens `scripts/run-lab.command` in Terminal and waits for the panel. Leave that Terminal session open. When the Touch screen appears, tap it if the page asks for sound. Close other panel pages, since only one page can play the emulator's audio.
 4. Play the Touch pads and controls. The on-screen controls include functions missing from the hardware. If the display is not detected, check its connection and macOS display settings. The status line reports the bridge and MIDI connection.
 
 For an audio comparison, stop first, select **Use Chrome for the Touch screen**, and start again. Google Chrome must be installed. Compare its sound and latency with the default WebKit view. The Chrome window uses a separate temporary profile.
@@ -28,3 +28,5 @@ If USB remains present but MIDI is silent, stop the app and run this in Terminal
 ```
 
 Reconnect as prompted, then start again. Do not change or rebuild the touch driver, AkaiTouchPanel.kext, or DisplayLink.
+
+The built-in Touch window appears during startup and follows the display if macOS re-enumerates it. **Show Touch** brings it forward. The app checks both the panel server and emulator before starting; an old panel page alone does not mean the Sample is running. Display placement, page-load failures and bridge output errors are recorded in `out/app.log` for troubleshooting. MIDI connected means the ports were found; it does not certify the physical screen, lights, touch alignment or every control.

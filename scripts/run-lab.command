@@ -12,8 +12,12 @@ LAB="$ROOT/vendor/virtual-mpc-sample"
 cd "$LAB" || exit 1
 
 if nc -z 127.0.0.1 5554 2>/dev/null; then
-  echo "The MPC Sample is already running (QMP port open). Stop it with: python3 lab.py stop"
-  exit 1
+  if ! nc -z 127.0.0.1 8765 2>/dev/null; then
+    echo "The MPC Sample is running; restoring the Touch panel server."
+    exec python3 "$ROOT/panel-ext/touch_server.py"
+  fi
+  echo "The MPC Sample and Touch panel are already running."
+  exit 0
 fi
 
 SERVER_PID=""
