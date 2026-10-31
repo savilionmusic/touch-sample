@@ -55,6 +55,7 @@ public final class BridgeRunner {
     private var latenciesMs: [Double] = []
     private var currentInputNs: UInt64 = 0
     private var started = false
+    private var touchGeneration = 0         // bumped when the Touch (re)appears, goes away, or the bridge stops
 
     public init(options: BridgeOptions = BridgeOptions()) { self.options = options }
 
@@ -117,7 +118,7 @@ public final class BridgeRunner {
         guard started else { return }
         started = false
         statsTimer?.cancel()
-        q.sync { run(core.stop(), origin: 0) }
+        q.sync { touchGeneration += 1; run(core.stop(), origin: 0) }
         _ = output.flush(timeout: 3)
         Thread.sleep(forTimeInterval: 0.2)   // let pending WebSocket sends (releases) go out
         socket.stop()
@@ -128,10 +129,43 @@ public final class BridgeRunner {
 
     // MARK: events
 
+    /// The Touch's ports appeared. PaperCut waits 0.4 s after the Touch enumerates before its setup
+    /// (Instrument.swift:1466), so the startup SysEx and LED baseline go out then, not at once. The LED state is
+    /// then re-sent (PaperCut re-sends after setup completes, main.swift:407) and refreshed every 8 s (PaperCut
+    /// controller_banks.c:214). All of it is cancelled if the Touch goes away or the bridge stops.
+    static let setupDelay = 0.4
+    static let refreshDelays = [0.7, 1.5]        // after the startup sequence has been queued
+    static let refreshInterval = 8.0
+
     private func touchUp() {
         state.touchConnected = true
         notify()
-        run(core.touchConnected(), origin: 0)
+        touchGeneration += 1
+        let gen = touchGeneration
+        whenCurrent(gen, after: BridgeRunner.setupDelay) {
+            self.run(self.core.touchConnected(), origin: 0)
+            for d in BridgeRunner.refreshDelays {
+                self.whenCurrent(gen, after: d) { self.run(self.core.refreshLights(), origin: 0) }
+            }
+            self.refreshLoop(gen)
+        }
+    }
+
+    /// Runs `body` on q after `seconds`, unless the Touch connection it belongs to has changed or the bridge stopped.
+    private func whenCurrent(_ gen: Int, after seconds: Double, _ body: @escaping () -> Void) {
+        q.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            guard let self = self, self.started, self.touchGeneration == gen else { return }
+            body()
+        }
+    }
+
+    /// Every 8 s: re-send the lit LEDs. The output queue coalesces per LED, so a refresh never queues more
+    /// than one message per LED however long the previous one is still draining.
+    private func refreshLoop(_ gen: Int) {
+        whenCurrent(gen, after: BridgeRunner.refreshInterval) {
+            self.run(self.core.refreshLights(litOnly: true), origin: 0)
+            self.refreshLoop(gen)
+        }
     }
 
     private func rescan() {
@@ -143,6 +177,7 @@ public final class BridgeRunner {
             touchUp()
         } else {
             log("MPC Touch MIDI disconnected")
+            touchGeneration += 1
             state.touchConnected = false
             notify()
             run(core.touchDisconnected(), origin: 0)

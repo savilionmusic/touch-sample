@@ -140,6 +140,18 @@ public final class BridgeCore {
         return finish(out)
     }
 
+    /// Sends the LED state (and pad colours, when enabled) again from scratch, as after a connect but without the
+    /// startup SysEx. The Touch can drop writes made while it is still starting; PaperCut re-sends too. Same messages
+    /// as the baseline (`B0 id v` on the ports in `bankLedPorts` for bank LEDs, Public otherwise). `litOnly` leaves
+    /// out the LEDs that are off, which keeps the periodic refresh short.
+    public func refreshLights(litOnly: Bool = false) -> [Effect] {
+        guard lightsEnabled, connected else { return [] }
+        sentLeds = [:]
+        sentPads = [:]
+        if litOnly { for (key, v) in desiredLeds() where v == 0 { sentLeds[key] = 0 } }
+        return finish([])
+    }
+
     /// The Touch went away: release everything held on the Sample; no output to the Touch.
     public func touchDisconnected() -> [Effect] {
         let out = releaseAll()

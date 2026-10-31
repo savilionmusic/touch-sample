@@ -543,6 +543,59 @@ private func checkLights() throws {
     let before = r.touch.count
     r.run(r.core.touchConnected())
     ck("reconnect after unplug re-sends startup and the full LED set", r.startups == 2 && r.touch.count - before >= 20, "\(r.touch.count - before)")
+    // refreshLights: the same LED state sent again from scratch (no startup), for a Touch that dropped early writes
+    let rf = try fresh("refreshLights")
+    rf.led(82, 2)
+    rf.sampleEvent(.pad(i: 0, rgb: [10, 20, 30]))
+    var latest = [String: String]()                                  // last value written per port + LED
+    for t in rf.touch where t.1.first == 0xB0 { latest["\(t.0.label) \(t.1[1])"] = "\(t.0.label) \(hexString(t.1))" }
+    var rm = rf.mark()
+    let startupsBefore = rf.startups
+    rf.run(rf.core.refreshLights())
+    let full = rf.touchSince(rm)
+    let fullLeds = full.filter { $0.1.first == 0xB0 }
+    ck("refreshLights: re-sends every LED once, same values as the connect baseline (PLAY lit, bank A both ports, FULL LEVEL off)",
+       Set(fullLeds.map { "\($0.0.label) \(hexString($0.1))" }) == Set(latest.values) && fullLeds.count == latest.count
+        && fullLeds.contains { $0.1 == h("B0 52 02") } && fullLeds.contains { $0.1 == h("B0 27 00") },
+       "\(fullLeds.count) vs \(latest.count)")
+    ck("refreshLights: no startup SysEx, pad colours follow the LEDs",
+       rf.startups == startupsBefore && full.contains { $0.1 == h("F0 47 7F 37 65 00 04 00 0A 14 1E F7") }
+        && full.filter({ $0.1.first == 0xF0 }).count == 1)
+    ck("refreshLights: Private only gets B0 23..26 / B0 5A..5D, at most 8 messages",
+       fullLeds.filter { $0.0 == .private }.count <= 8 && fullLeds.filter { $0.0 == .private }.allSatisfy { (0x23...0x26).contains($0.1[1]) || (0x5A...0x5D).contains($0.1[1]) },
+       "\(fullLeds.filter { $0.0 == .private }.map { hexString($0.1) })")
+    print("      refreshLights worst case here: \(fullLeds.filter { $0.0 == .public }.count) Public + \(fullLeds.filter { $0.0 == .private }.count) Private LED CCs, \(full.count - fullLeds.count) pad SysEx")
+    rm = rf.mark()
+    rf.run(rf.core.refreshLights(litOnly: true))
+    let lit = rf.touchSince(rm).filter { $0.1.first == 0xB0 }
+    ck("refreshLights(litOnly:) re-sends only the lit LEDs (PLAY, bank A both ports), not the off ones",
+       !lit.isEmpty && lit.count < fullLeds.count && lit.allSatisfy { $0.1[2] != 0 } && lit.contains { $0.1 == h("B0 52 02") }
+        && lit.contains { $0.0 == .private && $0.1 == h("B0 23 03") } && !lit.contains { $0.1 == h("B0 27 00") }, "\(lit.count)")
+    rf.led(999, 2); rf.led(126, 1)
+    rm = rf.mark()
+    rf.run(rf.core.refreshLights())
+    ck("refreshLights: Sample LEDs with no Touch light produce nothing extra",
+       Set(rf.touchSince(rm).filter { $0.1.first == 0xB0 }.map { hexString($0.1) }) == Set(fullLeds.map { hexString($0.1) }) && rf.touchSince(rm).filter({ $0.1.first == 0xB0 }).count == fullLeds.count)
+    rf.led(82, 0)
+    rm = rf.mark()
+    rf.run(rf.core.refreshLights())
+    ck("refreshLights follows the current state (PLAY now off)", rf.touchSince(rm).contains { $0.1 == h("B0 52 00") } && !rf.touchSince(rm).contains { $0.1 == h("B0 52 02") })
+    let rOff = try fresh("refreshLights padColour disabled", padColour: false)
+    rOff.sampleEvent(.pad(i: 0, rgb: [10, 20, 30]))
+    rm = rOff.mark()
+    rOff.run(rOff.core.refreshLights())
+    ck("refreshLights: pad colours stay off while padColour.enabled is false", !rOff.touchSince(rm).isEmpty && rOff.touchSince(rm).allSatisfy { $0.1.first == 0xB0 })
+    let rIdle = Sim("refresh before connect", BridgeCore(config: try testConfig()))
+    rIdle.run(rIdle.core.start())
+    rIdle.run(rIdle.core.refreshLights())
+    let beforeConnect = rIdle.touch.count
+    rIdle.run(rIdle.core.touchConnected()); rIdle.run(rIdle.core.touchDisconnected())
+    let gone = rIdle.mark()
+    rIdle.run(rIdle.core.refreshLights())
+    let rNoLights = Sim("refresh --no-lights", BridgeCore(config: try testConfig(), lights: false))
+    rNoLights.run(rNoLights.core.start()); rNoLights.connect(); rNoLights.run(rNoLights.core.refreshLights())
+    ck("refreshLights sends nothing before the Touch connects, after it goes away, or with --no-lights",
+       beforeConnect == 0 && rIdle.touchSince(gone).isEmpty && rNoLights.touch.isEmpty && rNoLights.startups == 0)
     // --no-lights
     let nl = Sim("no-lights", BridgeCore(config: try testConfig(), lights: false))
     nl.run(nl.core.start()); nl.connect(); nl.led(82, 2)
@@ -614,10 +667,14 @@ private func checkPacing() {
         return zip(ns.dropFirst(), ns).map { Double($0 - $1) / 1e6 }
     }
     let pg = gaps(.public), vg = gaps(.private)
-    ck("Public messages are >= 3 ms apart", (pg.min() ?? 99) >= 2.9, "min \(pg.min() ?? 0) ms")
+    ck("Public messages are >= 20 ms apart (PaperCut's gap)", (pg.min() ?? 99) >= 19.5 && pg.count == 13, "min \(pg.min() ?? 0) ms, \(pg.count) gaps")
     ck("Private messages are >= 20 ms apart", (vg.min() ?? 99) >= 19.5 && vg.count == 3, "min \(vg.min() ?? 0) ms")
     let pad = rec.items.filter { $0.role == .public && $0.bytes.first == 0xF0 }.map { $0.ns }
-    ck("pad-colour SysEx are >= 5 ms apart", pad.count == 2 && Double(pad[1] - pad[0]) / 1e6 >= 4.9)
+    ck("pad-colour SysEx are >= 20 ms apart", pad.count == 2 && Double(pad[1] - pad[0]) / 1e6 >= 19.5)
+    let lastPublic = rec.items.lastIndex { $0.role == .public } ?? -1
+    let firstPrivate = rec.items.firstIndex { $0.role == .private } ?? -1
+    ck("Private messages queued after Public ones go out after them (Public before Private)",
+       firstPrivate > lastPublic && lastPublic >= 0, "last Public #\(lastPublic), first Private #\(firstPrivate)")
 
     // coalescing: many updates of the same LED while the queue is busy collapse to the newest value
     let rec2 = Rec()
