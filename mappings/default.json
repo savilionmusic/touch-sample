@@ -1,0 +1,154 @@
+{
+ "_comment": "Touch control (hardware/touch-profile.json name) -> MPC Sample control (vendor panel/controls.json name). Defaults from CONTROL_MAP.md; Sav edits freely. 'shift' = bridge-owned Shift combination (SHIFT is released to the Sample first). Anything not listed is dropped and logged once.",
+ "pads": {
+  "passThrough": true
+ },
+ "knobs": {
+  "Q1": {
+   "send": "K1"
+  },
+  "Q2": {
+   "send": "K2"
+  },
+  "Q3": {
+   "send": "K3"
+  },
+  "Q4": {
+   "send": "FADER",
+   "shift": {
+    "send": "MAIN VOLUME"
+   }
+  }
+ },
+ "wheel": {
+  "DATA": {
+   "send": "DATA"
+  },
+  "DATA PUSH": {
+   "send": "DATA"
+  }
+ },
+ "buttons": {
+  "SHIFT": {
+   "send": "SHIFT"
+  },
+  "PLAY": {
+   "send": "PLAY"
+  },
+  "STOP": {
+   "send": "STOP"
+  },
+  "PLAY START": {
+   "macro": [
+    "STOP",
+    "PLAY"
+   ]
+  },
+  "REC": {
+   "send": "SAMPLE RECORD"
+  },
+  "OVERDUB": {
+   "send": "SEQ RECORD"
+  },
+  "TAP TEMPO": {
+   "send": "TAP TEMPO"
+  },
+  "NOTE REPEAT": {
+   "send": "NOTE REPEAT"
+  },
+  "ERASE": {
+   "send": "ERASE"
+  },
+  "16 LEVEL": {
+   "send": "16 LEVELS"
+  },
+  "QLINK": {
+   "send": "KNOB FX"
+  },
+  "FULL LEVEL": {
+   "bridge": "fullLevel"
+  },
+  "BANK A": {
+   "bridge": "bank",
+   "bank": 0,
+   "shift": {
+    "bridge": "bank",
+    "bank": 4
+   }
+  },
+  "BANK B": {
+   "bridge": "bank",
+   "bank": 1,
+   "shift": {
+    "bridge": "bank",
+    "bank": 5
+   }
+  },
+  "BANK C": {
+   "bridge": "bank",
+   "bank": 2,
+   "shift": {
+    "bridge": "bank",
+    "bank": 6
+   }
+  },
+  "BANK D": {
+   "bridge": "bank",
+   "bank": 3,
+   "shift": {
+    "bridge": "bank",
+    "bank": 7
+   }
+  },
+  "MAIN": {
+   "send": "SAMPLE",
+   "shift": {
+    "send": "SEQ"
+   }
+  },
+  "MENU": {
+   "send": "SAMPLE SELECT",
+   "shift": {
+    "send": "PAD FX"
+   }
+  },
+  "MINUS": {
+   "send": "MINUS"
+  },
+  "PLUS": {
+   "send": "PLUS"
+  },
+  "UNDO": {
+   "send": "CHOP"
+  },
+  "COPY": {
+   "send": "MUTE"
+  }
+ },
+ "spares": {
+  "_comment": "Touch buttons that touch-capture lists under 'spares' in the profile, with no entry above, get these Sample controls in order",
+  "order": [
+   "LOOP"
+  ]
+ },
+ "lights": {
+  "modeLeds": {
+   "MAIN": {
+    "lit": "SAMPLE",
+    "dim": "SEQ"
+   },
+   "MENU": {
+    "lit": "SAMPLE SELECT",
+    "dim": "PAD FX"
+   }
+  },
+  "qlinkBankLeds": {
+   "FADER": 90,
+   "MAIN VOLUME": 91
+  },
+  "bankLeds": {
+   "litAtoD": 3,
+   "dimEtoH": 1
+  }
+ }
+}

@@ -1,0 +1,454 @@
+{
+ "_comment": "MPC Touch raw IDs. Filled and verified by `touch-capture` (Phase 1). verified = measured on Sav's Touch. Channel is 1-based.",
+ "device": "MPC Touch",
+ "controls": {
+  "PAD 1": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 37,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 2": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 36,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 3": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 42,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 4": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 82,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 5": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 40,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 6": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 38,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 7": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 46,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 8": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 44,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 9": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 48,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 10": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 47,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 11": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 45,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 12": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 43,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 13": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 49,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 14": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 55,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 15": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 51,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "PAD 16": {
+   "kind": "pad",
+   "channel": 10,
+   "id": 53,
+   "port": "public",
+   "verified": true,
+   "note": "PaperCut ships all 16; pad 1 measured"
+  },
+  "Q1": {
+   "kind": "cc",
+   "channel": 1,
+   "id": 16,
+   "port": "public",
+   "verified": true
+  },
+  "Q1 TOUCH": {
+   "kind": "note",
+   "channel": 1,
+   "id": 84,
+   "port": "public",
+   "verified": true
+  },
+  "Q2": {
+   "kind": "cc",
+   "channel": 1,
+   "id": 17,
+   "port": "public",
+   "verified": false
+  },
+  "Q2 TOUCH": {
+   "kind": "note",
+   "channel": 1,
+   "id": 85,
+   "port": "public",
+   "verified": false
+  },
+  "Q3": {
+   "kind": "cc",
+   "channel": 1,
+   "id": 18,
+   "port": "public",
+   "verified": false
+  },
+  "Q3 TOUCH": {
+   "kind": "note",
+   "channel": 1,
+   "id": 86,
+   "port": "public",
+   "verified": false
+  },
+  "Q4": {
+   "kind": "cc",
+   "channel": 1,
+   "id": 19,
+   "port": "public",
+   "verified": false
+  },
+  "Q4 TOUCH": {
+   "kind": "note",
+   "channel": 1,
+   "id": 87,
+   "port": "public",
+   "verified": false
+  },
+  "DATA": {
+   "kind": "cc",
+   "channel": 1,
+   "id": 100,
+   "port": "public",
+   "verified": true,
+   "note": "01 = right, 7F = left"
+  },
+  "DATA PUSH": {
+   "kind": "note",
+   "channel": 1,
+   "id": 111,
+   "port": "public",
+   "verified": true,
+   "led": null,
+   "ledVerified": false
+  },
+  "QLINK": {
+   "kind": "note",
+   "channel": 1,
+   "id": 0,
+   "port": "public",
+   "verified": true,
+   "led": 0,
+   "ledVerified": false
+  },
+  "SHIFT": {
+   "kind": "note",
+   "channel": 1,
+   "id": 49,
+   "port": "public",
+   "verified": true,
+   "led": 49,
+   "ledVerified": true
+  },
+  "PLAY": {
+   "kind": "note",
+   "channel": 1,
+   "id": 82,
+   "port": "private",
+   "verified": true,
+   "led": 82,
+   "ledVerified": true
+  },
+  "STOP": {
+   "kind": "note",
+   "channel": 1,
+   "id": 81,
+   "port": "private",
+   "verified": true,
+   "led": 81,
+   "ledVerified": true
+  },
+  "PLAY START": {
+   "kind": "note",
+   "channel": 1,
+   "id": 83,
+   "port": "private",
+   "verified": true,
+   "led": 83,
+   "ledVerified": true
+  },
+  "REC": {
+   "kind": "note",
+   "channel": 1,
+   "id": 73,
+   "port": "private",
+   "verified": true,
+   "led": 73,
+   "ledVerified": true
+  },
+  "OVERDUB": {
+   "kind": "note",
+   "channel": 1,
+   "id": 80,
+   "port": "public",
+   "verified": false,
+   "led": 80,
+   "ledVerified": true,
+   "note": "LED in PaperCut's boot list; press not measured"
+  },
+  "TAP TEMPO": {
+   "kind": "note",
+   "channel": 1,
+   "id": 53,
+   "port": "public",
+   "verified": true,
+   "led": 53,
+   "ledVerified": true
+  },
+  "NOTE REPEAT": {
+   "kind": "note",
+   "channel": 1,
+   "id": 11,
+   "port": "public",
+   "verified": false,
+   "led": 11,
+   "ledVerified": false,
+   "note": "MPC Live/X map"
+  },
+  "ERASE": {
+   "kind": "note",
+   "channel": 1,
+   "id": 9,
+   "port": "public",
+   "verified": false,
+   "led": 9,
+   "ledVerified": false,
+   "note": "MPC Live/X map"
+  },
+  "16 LEVEL": {
+   "kind": "note",
+   "channel": 1,
+   "id": 40,
+   "port": "public",
+   "verified": true,
+   "led": 40,
+   "ledVerified": true
+  },
+  "FULL LEVEL": {
+   "kind": "note",
+   "channel": 1,
+   "id": 39,
+   "port": "public",
+   "verified": true,
+   "led": 39,
+   "ledVerified": true
+  },
+  "BANK A": {
+   "kind": "note",
+   "channel": 1,
+   "id": 35,
+   "port": "public",
+   "verified": true,
+   "led": 35,
+   "ledVerified": true,
+   "note": "LED value 3 = lit"
+  },
+  "BANK B": {
+   "kind": "note",
+   "channel": 1,
+   "id": 36,
+   "port": "public",
+   "verified": true,
+   "led": 36,
+   "ledVerified": true,
+   "note": "LED value 3 = lit"
+  },
+  "BANK C": {
+   "kind": "note",
+   "channel": 1,
+   "id": 37,
+   "port": "public",
+   "verified": true,
+   "led": 37,
+   "ledVerified": true,
+   "note": "LED value 3 = lit"
+  },
+  "BANK D": {
+   "kind": "note",
+   "channel": 1,
+   "id": 38,
+   "port": "public",
+   "verified": true,
+   "led": 38,
+   "ledVerified": true,
+   "note": "LED value 3 = lit"
+  },
+  "MAIN": {
+   "kind": "note",
+   "channel": 1,
+   "id": null,
+   "port": "public",
+   "verified": false,
+   "led": null,
+   "ledVerified": false,
+   "note": "find in Phase 1 capture"
+  },
+  "MENU": {
+   "kind": "note",
+   "channel": 1,
+   "id": null,
+   "port": "public",
+   "verified": false,
+   "led": null,
+   "ledVerified": false,
+   "note": "find in Phase 1 capture"
+  },
+  "UNDO": {
+   "kind": "note",
+   "channel": 1,
+   "id": null,
+   "port": "public",
+   "verified": false,
+   "led": null,
+   "ledVerified": false,
+   "note": "find in Phase 1 capture"
+  },
+  "COPY": {
+   "kind": "note",
+   "channel": 1,
+   "id": null,
+   "port": "public",
+   "verified": false,
+   "led": null,
+   "ledVerified": false,
+   "note": "find in Phase 1 capture"
+  },
+  "MINUS": {
+   "kind": "note",
+   "channel": 1,
+   "id": null,
+   "port": "public",
+   "verified": false,
+   "led": null,
+   "ledVerified": false,
+   "note": "find in Phase 1 capture"
+  },
+  "PLUS": {
+   "kind": "note",
+   "channel": 1,
+   "id": null,
+   "port": "public",
+   "verified": false,
+   "led": null,
+   "ledVerified": false,
+   "note": "find in Phase 1 capture"
+  }
+ },
+ "spares": [],
+ "unidentifiedBootLeds": [
+  52,
+  54,
+  67,
+  122
+ ],
+ "bankLedPorts": [
+  "public",
+  "private"
+ ],
+ "padColour": {
+  "enabled": false,
+  "port": "public",
+  "product": 55,
+  "indexMap": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15
+  ],
+  "verified": false,
+  "_comment": "Candidate: F0 47 7F 37 65 00 04 pad R G B F7. touch-capture leds tests it and sets enabled."
+ }
+}

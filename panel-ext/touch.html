@@ -1,0 +1,430 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Touch Sample</title>
+<style>
+:root {
+  --bg: #000; --panel: #14171c; --btn: #20252d; --btn-edge: #323945; --text: #c9d0da; --muted: #7d8794;
+  --amber: #ffb020; --amber-dim: #6b4a10; --ok: #4fd18b; --bad: #ff6b5e; --warn: #ffc857;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+  font: 600 18px/1.2 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  cursor: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
+  overscroll-behavior: none;
+}
+* { cursor: none; }
+#stage { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; transform-origin: 0 0; background: var(--bg); overflow: hidden; }
+
+#screenWrap { position: absolute; left: 0; top: 0; width: 960px; height: 720px; background: #05070a; }
+#screen { position: absolute; left: 0; top: 0; width: 960px; height: 720px; image-rendering: pixelated; image-rendering: crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: pixelated; background: #05070a; }
+#screen.off { opacity: .25; }
+#vmoff { position: absolute; left: 0; top: 330px; width: 960px; text-align: center; color: var(--muted); font-size: 26px; display: none; pointer-events: none; }
+#soundBadge { position: absolute; left: 12px; top: 12px; padding: 10px 18px; border-radius: 22px; background: rgba(255,176,32,.92); color: #000; font-size: 20px; font-weight: 700; display: none; }
+
+#knob { position: absolute; left: 180px; top: 600px; width: 600px; height: 96px; padding: 12px 20px; border-radius: 14px;
+  background: rgba(10,12,16,.88); border: 2px solid var(--amber); display: none; }
+#knob.on { display: block; }
+#knob .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 30px; color: #fff; }
+#knob .row b { color: var(--amber); font-size: 34px; font-variant-numeric: tabular-nums; }
+#knobTrack { margin-top: 10px; height: 18px; border-radius: 9px; background: #2a2f38; overflow: hidden; }
+#knobFill { height: 100%; width: 0; background: var(--amber); }
+
+#screens { position: absolute; left: 0; top: 720px; width: 960px; height: 80px; display: flex; gap: 8px; padding: 8px; background: var(--bg); }
+#screens .btn { flex: 1; height: 64px; font-size: 22px; }
+
+#right { position: absolute; left: 960px; top: 0; width: 320px; height: 800px; padding: 8px 10px; background: var(--panel); border-left: 2px solid #000; }
+#status { height: 40px; display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: center; font-size: 14px; color: var(--muted); letter-spacing: .02em; }
+#status span { white-space: nowrap; }
+#status .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #444; margin-right: 5px; vertical-align: baseline; }
+#status .ok .dot { background: var(--ok); } #status .bad .dot { background: var(--bad); } #status .warn .dot { background: var(--warn); }
+#status .on { color: var(--amber); }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.btn { position: relative; height: 64px; border-radius: 10px; background: var(--btn); border: 2px solid var(--btn-edge); color: var(--text);
+  display: flex; align-items: center; justify-content: center; text-align: center; font-size: 19px; letter-spacing: .03em; line-height: 1.1; touch-action: none; }
+#right .btn { height: 60px; }
+.btn.span2 { grid-column: span 2; }
+.btn.dim { border-color: var(--amber); color: var(--amber); background: #2a2418; }
+.btn.lit { background: var(--amber); border-color: #ffd37a; color: #000; box-shadow: 0 0 18px rgba(255,176,32,.55); }
+.btn.down { transform: scale(.96); filter: brightness(1.25); }
+.btn.small { font-size: 22px; }
+.label { margin: 6px 0 4px; font-size: 13px; color: var(--muted); letter-spacing: .08em; }
+
+#faders { position: absolute; left: 10px; top: 482px; width: 300px; height: 310px; display: flex; gap: 10px; }
+.fader { position: relative; flex: 1; border-radius: 12px; background: var(--btn); border: 2px solid var(--btn-edge); overflow: hidden; touch-action: none; }
+.fader .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 50%; background: #3b4a63; }
+.fader .cap { position: absolute; left: 0; right: 0; height: 8px; margin-top: -4px; background: var(--amber); box-shadow: 0 0 10px rgba(255,176,32,.6); }
+.fader .name { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 15px; color: #e6ebf2; letter-spacing: .06em; pointer-events: none; text-shadow: 0 1px 2px #000; }
+.fader .val { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 26px; color: #fff; font-variant-numeric: tabular-nums; pointer-events: none; text-shadow: 0 1px 3px #000; }
+.fader.active { border-color: var(--amber); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="screenWrap">
+    <canvas id="screen" width="320" height="240" class="off"></canvas>
+    <div id="vmoff">Waiting for the Sample (VM not running)</div>
+    <div id="soundBadge">tap for sound</div>
+    <div id="knob"><div class="row"><span id="knobName">K1</span><b id="knobVal">0</b></div><div id="knobTrack"><div id="knobFill"></div></div></div>
+  </div>
+  <div id="screens">
+    <div class="btn" data-name="SCREEN 1">SCREEN 1</div>
+    <div class="btn" data-name="SCREEN 2">SCREEN 2</div>
+    <div class="btn" data-name="SCREEN 3">SCREEN 3</div>
+  </div>
+  <div id="right">
+    <div id="status">
+      <span id="stVm"><i class="dot"></i>VM</span>
+      <span id="stTouch"><i class="dot"></i>Touch</span>
+      <span id="stFull">FULL LEVEL</span>
+      <span id="stQ4">Q4 -</span>
+    </div>
+    <div class="grid">
+      <div class="btn" data-name="CHOP">CHOP</div>
+      <div class="btn" data-name="MUTE">MUTE</div>
+      <div class="btn" data-name="LOOP">LOOP</div>
+      <div class="btn" data-name="PAD FX">PAD FX</div>
+      <div class="btn" data-name="MINUS">MINUS</div>
+      <div class="btn" data-name="PLUS">PLUS</div>
+    </div>
+    <div class="label">PAD BANK</div>
+    <div class="grid4">
+      <div class="btn small" data-bank="4">E</div>
+      <div class="btn small" data-bank="5">F</div>
+      <div class="btn small" data-bank="6">G</div>
+      <div class="btn small" data-bank="7">H</div>
+    </div>
+    <div class="grid" style="margin-top:8px">
+      <div class="btn" data-name="SAMPLE">SAMPLE</div>
+      <div class="btn" data-name="SEQ">SEQ</div>
+      <div class="btn" data-name="SAMPLE SELECT">SAMPLE SELECT</div>
+      <div class="btn" data-name="KNOB FX">KNOB FX</div>
+    </div>
+    <div id="faders">
+      <div class="fader" data-name="FADER"><div class="fill"></div><div class="cap"></div><div class="name">FADER</div><div class="val">64</div></div>
+      <div class="fader" data-name="MAIN VOLUME"><div class="fill"></div><div class="cap"></div><div class="name">MAIN VOLUME</div><div class="val">100</div></div>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+// Touch Sample: the page for the MPC Touch's 1280x800 screen. Talks to panel-ext/touch_server.py:
+// the stock /ws (screen frames, state, controls, as the stock panel page does) and /touchui (events).
+// The sound code (WORKLETS, AUDIO_WORKER, startAudio) is adapted from panel/index.html of
+// orrpunk-art/virtual-mpc-sample (MIT licence).
+const $ = id => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+
+// ---------------------------------------------------------------- fit 1280x800 into the window (1:1 on the Touch)
+function fit() {
+  const s = Math.min(innerWidth / 1280, innerHeight / 800);
+  const st = $("stage");
+  st.style.transform = "translate(" + Math.round((innerWidth - 1280 * s) / 2) + "px," + Math.round((innerHeight - 800 * s) / 2) + "px) scale(" + s + ")";
+}
+addEventListener("resize", fit); fit();
+for (const ev of ["contextmenu", "selectstart", "dragstart", "gesturestart"]) addEventListener(ev, e => e.preventDefault());
+document.addEventListener("touchmove", e => e.preventDefault(), { passive: false });
+
+// ---------------------------------------------------------------- state
+let LEDS = {};                 // led id -> value (0/1/>=2)
+let MAPC = {                   // control name -> led id (overridden by /controls.json)
+  CHOP: 75, MUTE: 43, LOOP: 74, "PAD FX": 1, PLUS: 54, MINUS: 55, SAMPLE: 6, SEQ: 7, "SAMPLE SELECT": 36, "KNOB FX": 0,
+};
+const BANK_LEDS = [57, 58, 59, 60, 61, 62, 63, 64];   // A..H
+let vmUp = false, bridge = null;
+const buttons = {};            // name -> element
+
+function currentBank() {
+  for (let i = 0; i < 8; i++) if ((LEDS[BANK_LEDS[i]] || 0) > 0) return i;
+  return -1;
+}
+function applyLeds() {
+  for (const [name, d] of Object.entries(buttons)) {
+    const id = MAPC[name];
+    if (id == null) continue;
+    const v = LEDS[id] || 0;
+    d.classList.toggle("lit", v >= 2);
+    d.classList.toggle("dim", v === 1);
+  }
+  const cur = currentBank();
+  for (const d of document.querySelectorAll("[data-bank]")) d.classList.toggle("lit", +d.dataset.bank === cur);
+}
+function setStatus() {
+  const vm = $("stVm"), t = $("stTouch");
+  vm.className = vmUp ? "ok" : "bad";
+  const touch = bridge ? bridge.touch : null;
+  t.className = touch === "connected" ? "ok" : (touch === "offline" ? "bad" : "warn");
+  t.lastChild.textContent = touch === "connected" ? "Touch" : (touch === "offline" ? "Touch offline" : "no bridge");
+  $("stFull").className = bridge && bridge.fullLevel ? "on" : "";
+  $("stFull").textContent = bridge && bridge.fullLevel ? "FULL LEVEL ON" : "FULL LEVEL off";
+  $("stQ4").textContent = "Q4 " + (bridge && bridge.q4 ? bridge.q4 : "-");
+  $("vmoff").style.display = vmUp ? "none" : "block";
+}
+
+// ---------------------------------------------------------------- stock /ws: screen, state, controls
+let ws = null, lastFrame = 0;
+const screen = $("screen"), sctx = screen.getContext("2d");
+function wsSend(m) {
+  if (ws && ws.readyState === 1) { ws.send(JSON.stringify(m)); return true; }
+  return false;
+}
+const act = (name, action, value) => {
+  if (!wsSend({ t: "control", name, action, value })) {
+    fetch("/control", { method: "POST", body: JSON.stringify({ name, action, value }) }).catch(() => {});
+  }
+};
+function connect() {
+  ws = new WebSocket("ws://" + location.host + "/ws");
+  ws.binaryType = "arraybuffer";
+  ws.onclose = () => { ws = null; setTimeout(connect, 1000); };
+  ws.onmessage = e => {
+    if (typeof e.data === "string") return onState(JSON.parse(e.data));
+    const kind = new Uint8Array(e.data, 0, 1)[0];
+    if (kind === 1) drawFrame(e.data);
+    else if (kind === 3) drawPng(e.data.slice(1));
+  };
+}
+function drawFrame(buf) {
+  const dv = new DataView(buf), w = dv.getUint16(1, true), h = dv.getUint16(3, true);
+  const px = new Uint8ClampedArray(buf.slice(5));
+  for (let i = 3; i < px.length; i += 4) px[i] = 255;    // VNC's padding byte -> opaque
+  if (screen.width !== w || screen.height !== h) { screen.width = w; screen.height = h; }
+  sctx.putImageData(new ImageData(px, w, h), 0, 0);
+  screen.classList.remove("off");
+  lastFrame = performance.now();
+}
+async function drawPng(buf) {
+  const bmp = await createImageBitmap(new Blob([buf], { type: "image/png" }));
+  if (screen.width !== bmp.width || screen.height !== bmp.height) { screen.width = bmp.width; screen.height = bmp.height; }
+  sctx.drawImage(bmp, 0, 0);
+  screen.classList.remove("off");
+  lastFrame = performance.now();
+}
+let pcmPort = 5557, potsSynced = false;
+function onState(s) {
+  if (s.pcm_port) pcmPort = s.pcm_port;
+  vmUp = !!s.connected;
+  if (s.leds) { LEDS = Object.assign({}, s.leds); applyLeds(); }
+  if (s.pots && !potsSynced) {
+    for (const f of faders) if (s.pots[f.cc] !== undefined && !f.active) f.show(s.pots[f.cc]);
+    potsSynced = true;
+  }
+  setStatus();
+}
+
+// ---------------------------------------------------------------- buttons
+const pressed = new Set();
+function bindButton(d, name) {
+  buttons[name] = d;
+  const down = () => { if (pressed.has(d)) return; pressed.add(d); d.classList.add("down"); act(name, "press"); };
+  const up = () => { if (!pressed.has(d)) return; pressed.delete(d); d.classList.remove("down"); act(name, "release"); };
+  d.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { d.setPointerCapture(e.pointerId); } catch (_) {}
+    down();
+  });
+  d.addEventListener("pointerup", up);
+  d.addEventListener("pointercancel", up);
+  d.addEventListener("lostpointercapture", up);
+  // With capture the pointer never "leaves"; without it (capture refused) leaving ends the press.
+  d.addEventListener("pointerleave", e => { let cap = false; try { cap = d.hasPointerCapture(e.pointerId); } catch (_) {} if (!cap) up(); });
+}
+for (const d of document.querySelectorAll("[data-name]")) if (!d.classList.contains("fader")) bindButton(d, d.dataset.name);
+function releaseAll() { for (const d of Array.from(pressed)) d.dispatchEvent(new Event("pointercancel")); }
+addEventListener("blur", releaseAll);
+document.addEventListener("visibilitychange", () => { if (document.hidden) releaseAll(); });
+
+// ---------------------------------------------------------------- pad bank E-H: walk PAD BANK like BridgeCore
+let walkToken = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function waitBankChange(from) {
+  const t0 = performance.now();
+  while (performance.now() - t0 < 250) {
+    await sleep(10);
+    if (currentBank() !== from) return;
+  }
+}
+async function gotoBank(target) {
+  const token = ++walkToken;                         // a new target cancels a running walk
+  for (let n = 0; n < 8; n++) {
+    const cur = currentBank();
+    if (cur === target || token !== walkToken) return;
+    act("PAD BANK", "press"); await sleep(40); act("PAD BANK", "release");
+    await waitBankChange(cur);
+    if (token !== walkToken) return;
+  }
+}
+for (const d of document.querySelectorAll("[data-bank]")) {
+  d.addEventListener("pointerdown", e => { e.preventDefault(); d.classList.add("down"); gotoBank(+d.dataset.bank); });
+  const off = () => d.classList.remove("down");
+  d.addEventListener("pointerup", off); d.addEventListener("pointercancel", off); d.addEventListener("pointerleave", off);
+}
+
+// ---------------------------------------------------------------- faders (absolute)
+const faders = [];
+for (const d of document.querySelectorAll(".fader")) {
+  const name = d.dataset.name, cc = name === "FADER" ? 20 : 19;
+  const f = { name, cc, d, v: name === "FADER" ? 64 : 100, sent: -1, active: false, flush: 0 };
+  f.show = v => {
+    f.v = Math.max(0, Math.min(127, Math.round(v)));
+    const pct = f.v / 127 * 100;
+    d.querySelector(".fill").style.height = pct + "%";
+    d.querySelector(".cap").style.top = (100 - pct) + "%";
+    d.querySelector(".val").textContent = f.v;
+  };
+  const fromEvent = e => {
+    const r = d.getBoundingClientRect();
+    return (1 - (e.clientY - r.top) / r.height) * 127;
+  };
+  const send = () => {
+    f.flush = 0;
+    if (f.v !== f.sent) { f.sent = f.v; act(name, "set", f.v); }
+  };
+  const move = e => {
+    f.show(fromEvent(e));
+    if (!f.flush) f.flush = requestAnimationFrame(send);
+  };
+  const end = () => { f.active = false; d.classList.remove("active"); send(); };
+  d.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    try { d.setPointerCapture(e.pointerId); } catch (_) {}
+    f.active = true; d.classList.add("active"); move(e);
+  });
+  d.addEventListener("pointermove", e => { if (f.active) move(e); });
+  d.addEventListener("pointerup", end);
+  d.addEventListener("pointercancel", end);
+  d.addEventListener("lostpointercapture", end);
+  f.show(f.v);
+  faders.push(f);
+}
+
+// ---------------------------------------------------------------- /touchui: events, knob overlay, bridge status
+let tui = null, knobTimer = 0;
+function connectUi() {
+  tui = new WebSocket("ws://" + location.host + "/touchui");
+  tui.onclose = () => { tui = null; setTimeout(connectUi, 1000); };
+  tui.onmessage = e => {
+    let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+    if (m.t === "hello") { LEDS = Object.assign({}, m.leds); vmUp = !!m.vm; applyLeds(); setStatus(); }
+    else if (m.t === "led") { LEDS[m.id] = m.v; applyLeds(); }
+    else if (m.t === "vm") { vmUp = !!m.connected; setStatus(); }
+    else if (m.t === "ui") {
+      if (m.kind === "knob") showKnob(m);
+      else if (m.kind === "bridge") { bridge = m; setStatus(); }
+    }
+  };
+}
+function showKnob(m) {
+  $("knobName").textContent = m.name;
+  const v = Math.max(0, Math.min(127, +m.value || 0));
+  $("knobVal").textContent = v;
+  $("knobFill").style.width = (v / 127 * 100) + "%";
+  $("knob").classList.add("on");
+  clearTimeout(knobTimer);
+  if (m.touched === false) knobTimer = setTimeout(() => $("knob").classList.remove("on"), 1500);
+}
+
+// ---------------------------------------------------------------- sound (adapted from the stock panel page, MIT)
+const WORKLETS = `
+class Player extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.size = 65536; this.buf = new Float32Array(this.size * 2);
+    this.w = 0; this.r = 0; this.frac = 0; this.target = 320; this.ema = 320;
+    this.primed = false; this.under = 0; this.calm = 0; this.t = 0;
+    const push = data => {
+      const s = new Int16Array(data), n = s.length >> 1;
+      for (let i = 0; i < n; i++, this.w++) {
+        const k = (this.w % this.size) * 2;
+        this.buf[k] = s[2 * i] / 32768; this.buf[k + 1] = s[2 * i + 1] / 32768;
+      }
+      if (this.w - this.r > this.size / 2) { this.r = this.w - this.target; this.frac = 0; }
+    };
+    // PCM arrives straight from the audio worker on its own port (see AUDIO_WORKER)
+    this.port.onmessage = e => { if (e.data && e.data.port) e.data.port.onmessage = m => push(m.data); };
+  }
+  process(_, outputs) {
+    const L = outputs[0][0], R = outputs[0][1] || L, n = L.length;
+    const fill = this.w - this.r;
+    if (++this.t % 344 === 0) this.port.postMessage({ fill, target: this.target, under: this.under });
+    if (!this.primed) {
+      if (fill < this.target) { L.fill(0); R.fill(0); return true; }
+      this.primed = true; this.ema = fill;
+    }
+    if (fill > 4 * this.target) { this.r = this.w - this.target; this.ema = this.target; }
+    this.ema += 0.01 * (fill - this.ema);
+    const ratio = 1 + Math.max(-0.003, Math.min(0.003, 0.003 * (this.ema - this.target) / this.target));
+    if (++this.calm > 344 * 10 && this.target > 320) { this.target = Math.max(320, this.target - 32); this.calm = 0; }
+    for (let i = 0; i < n; i++) {
+      if (this.w - this.r < 2) {                 // underrun: silence, then rebuffer to a larger target
+        L.fill(0, i); R.fill(0, i);
+        this.primed = false; this.under++; this.calm = 0;
+        this.target = Math.min(1536, this.target + 128);
+        break;
+      }
+      const a = (this.r % this.size) * 2, b = ((this.r + 1) % this.size) * 2, t = this.frac;
+      L[i] = this.buf[a] + (this.buf[b] - this.buf[a]) * t;
+      R[i] = this.buf[a + 1] + (this.buf[b + 1] - this.buf[a + 1]) * t;
+      this.frac += ratio;
+      const step = Math.floor(this.frac);
+      this.r += step; this.frac -= step;
+    }
+    return true;
+  }
+}
+registerProcessor("mpclab-player", Player);
+`;
+const AUDIO_WORKER = `
+let out = null, ws = null, rest = new Uint8Array(0);
+function connect(url) {
+  ws = new WebSocket(url);   // QEMU's chardev for the bridge's "mpclab.pcm" port
+  ws.binaryType = "arraybuffer";
+  ws.onmessage = m => {
+    if (!out || typeof m.data === "string") return;
+    let b = new Uint8Array(m.data);
+    if (rest.length) { const j = new Uint8Array(rest.length + b.length); j.set(rest); j.set(b, rest.length); b = j; }
+    const n = b.length - b.length % 4;                       // whole stereo S16 frames
+    rest = b.slice(n);
+    if (n) { const c = b.slice(0, n).buffer; out.postMessage(c, [c]); }
+  };
+  ws.onclose = () => { ws = null; setTimeout(() => connect(url), 1000); };
+}
+onmessage = e => { out = e.data.port; connect(e.data.url); };
+`;
+let actx = null, player = null, audioWorker = null;
+async function startAudio() {
+  if (actx) { if (actx.state !== "running") actx.resume(); return; }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    actx = new AC({ sampleRate: 44100, latencyHint: 0 });
+    const sink = Q.get("sink");
+    if (sink && typeof actx.setSinkId === "function") { try { await actx.setSinkId(sink); } catch (_) {} }
+    await actx.audioWorklet.addModule(URL.createObjectURL(new Blob([WORKLETS], { type: "text/javascript" })));
+    player = new AudioWorkletNode(actx, "mpclab-player", { numberOfInputs: 0, outputChannelCount: [2] });
+    player.connect(actx.destination);
+    const ch = new MessageChannel();
+    player.port.postMessage({ port: ch.port1 }, [ch.port1]);
+    audioWorker = new Worker(URL.createObjectURL(new Blob([AUDIO_WORKER], { type: "text/javascript" })));
+    audioWorker.postMessage({ port: ch.port2, url: "ws://" + location.hostname + ":" + pcmPort }, [ch.port2]);
+    actx.onstatechange = showSound;
+    if (actx.state !== "running") actx.resume();
+  } catch (e) { console.error("sound failed", e); actx = null; }
+  showSound();
+}
+function showSound() { $("soundBadge").style.display = actx && actx.state === "running" ? "none" : "block"; }
+for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, startAudio, { capture: true });
+showSound();
+
+// ---------------------------------------------------------------- start
+fetch("/controls.json").then(r => r.json()).then(m => {
+  for (const name of Object.keys(MAPC)) { const c = m.controls && m.controls[name]; if (c && c.led != null) MAPC[name] = c.led; }
+  applyLeds();
+}).catch(() => {}).then(() => { connect(); connectUi(); setStatus(); });
+</script>
+</body>
+</html>
