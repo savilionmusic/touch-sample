@@ -40,3 +40,11 @@ Reconnect as prompted, then start again. Do not change or rebuild the touch driv
 The built-in Touch window appears during startup and follows the display if macOS re-enumerates it. **Show Touch** brings it forward. The app checks both the panel server and emulator before starting; an old panel page alone does not mean the Sample is running. Display placement, page-load failures and bridge output errors are recorded in `out/app.log` for troubleshooting. MIDI connected means the ports were found; it does not certify the physical screen, lights, touch alignment or every control.
 
 The Touch uses the installed driver's existing direct-touch connection, so taps and drags operate the panel without moving the Mac pointer. The app claims that connection only after the controller owner check; it releases it on Stop. Native audio starts with the panel. Chrome fallback uses the page audio player and its sound retry badge. Q-LINK cycles banks A/B: Q1–Q3 remain K1–K3, and Q4 switches between FADER and MAIN VOLUME. Shift temporarily selects the opposite Q4 assignment. KNOB FX stays available on screen.
+
+## Setting up on another Mac
+
+For a friend with an Apple Silicon Mac and their own "MPC Sample 1.3.0 Updater" (no MPC Touch needed). The kit holds no Akai files; the friend's Mac builds the firmware images from the friend's own updater.
+
+**Make the kit (Sav):** commit your changes, then run `scripts/make-friend-kit.sh`. It needs `vendor/virtual-mpc-sample/out/kernel/Image` and `out/bridge/mpclab-audio-bridge` (build them once with `lab.py build kernel bridge`). It writes `dist/Touch Sample Kit.zip` and refuses to build if a firmware file, disk image, key or SD card file is found, or if any file matches `inputs.sha256`. Send the zip.
+
+**Friend:** put the Akai updater (.zip or .app) on the Desktop, unzip the kit, right-click `Setup.command` and Open. It installs Homebrew and tools if missing, unpacks the project to `~/Documents/Codex/TouchSample`, clones the two emulator repositories at their pinned commits, extracts the firmware, builds the images (30-60 minutes) and puts `Start MPC Sample.command` on the Desktop. Running Setup again resumes. Samples go in `vendor/virtual-mpc-sample/sdcard/`. The Touch Sample app is for a Mac with an MPC Touch attached; the friend uses the Desktop shortcut and the browser page.
