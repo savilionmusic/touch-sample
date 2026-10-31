@@ -415,7 +415,29 @@
    "note": "find in Phase 1 capture"
   }
  },
- "spares": [],
+ "spares": [
+  {
+   "id": 52,
+   "port": "public",
+   "verified": true,
+   "source": "PaperCut controller.log 'unmapped controller button'",
+   "name": null
+  },
+  {
+   "id": 55,
+   "port": "public",
+   "verified": true,
+   "source": "PaperCut controller.log 'unmapped controller button'",
+   "name": null
+  },
+  {
+   "id": 67,
+   "port": "public",
+   "verified": true,
+   "source": "PaperCut controller.log 'unmapped controller button'",
+   "name": null
+  }
+ ],
  "unidentifiedBootLeds": [
   52,
   54,
