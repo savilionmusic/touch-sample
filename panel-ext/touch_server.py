@@ -26,6 +26,47 @@ sys.path.insert(0, os.path.join(VENDOR, "panel"))
 import server  # noqa: E402  (the stock panel server)
 
 TOUCH_HTML = os.path.join(HERE, "touch.html")
+
+class _ThrottledVncSocket:
+    """The stock VNC client's socket, but its incremental update requests (3, 1, ...) are spaced
+    so QEMU sends at most SCREEN_FPS frames a second. Every update makes QEMU scan and copy the
+    framebuffer in its main loop, which competes with the vCPUs: pausing the panel for 10 s while
+    a sequence played gave 12 -> 6 guest xruns, but a 15 fps cap measured 14, 23, 11 (no gain). Off by default; TS_SCREEN_FPS=N sets a cap."""
+
+    def __init__(self, sock, fps):
+        self._sock, self._gap, self._last = sock, 1.0 / fps, 0.0
+
+    def sendall(self, data):
+        if data[:2] == b"\x03\x01":
+            wait = self._last + self._gap - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+            self._last = time.monotonic()
+        return self._sock.sendall(data)
+
+    def __getattr__(self, name):
+        return getattr(self._sock, name)
+
+
+class _SocketModule:
+    """`socket` as the stock server sees it: unchanged except connections to the VNC port."""
+
+    def __init__(self, real, fps):
+        self._real, self._fps = real, fps
+
+    def create_connection(self, address, *args, **kwargs):
+        sock = self._real.create_connection(address, *args, **kwargs)
+        if address[1] == server.PORTS["vnc"]:
+            return _ThrottledVncSocket(sock, self._fps)
+        return sock
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+SCREEN_FPS = float(os.environ.get("TS_SCREEN_FPS", "0"))
+if SCREEN_FPS > 0:
+    server.socket = _SocketModule(server.socket, SCREEN_FPS)
 PAD_COLOUR_PREFIX = bytes.fromhex("F0 47 7F 5C 65 00 04")
 
 

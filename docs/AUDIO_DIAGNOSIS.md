@@ -38,3 +38,7 @@ Listening result for the 2-vCPU idle-poll trial: Sav reported it sounded worse. 
 ## Real-time vCPU trial (2026-10-31, Claude)
 
 Pro Tools and SoundFlow were not running; WindowServer (~35%) and DisplayLink (~29%) were the busiest host processes beside QEMU (~32%). `lab-ext/qemu-tune/rtboost.c` is injected into QEMU with `DYLD_INSERT_LIBRARIES` (Homebrew QEMU is ad-hoc signed, no hardened runtime) and gives the `CPU n/HVF` threads the macOS time-constraint policy (1 ms period, 0.5 ms budget, preemptible), so they are not woken late behind WindowServer/DisplayLink. Tested on a dummy process: the named thread ran at priority 97R, the others stayed at 31. `TS_QEMU_RT=0` turns it off. Result: not yet measured.
+
+## Panel A/B (2026-10-31, Claude)
+
+Upstream (78d28ce, still latest) reports 6-11 app stream restarts per minute on its own Mac; we measure 11-21 guest playback xruns per 10 s on stock 4 vCPUs while Sav plays a sequence, with 0 host native underruns in the same windows. Freezing the panel server (SIGSTOP, 10 s) during a sequence gave 12 -> 6 -> 11. That pause also stops the panel UART (pad lights / LEDs) and bursts, not only VNC. A 15 fps cap on VNC update requests (`TS_SCREEN_FPS`, panel-ext) then measured 14, 23, 11: no gain, so it is off by default. Single 10 s windows vary widely; use several before concluding.
