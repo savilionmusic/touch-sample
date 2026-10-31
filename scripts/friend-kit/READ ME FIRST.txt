@@ -16,4 +16,5 @@ an internet connection, and about 15 GB of free space.
 
 Your samples go in:  Documents/Codex/TouchSample/vendor/virtual-mpc-sample/sdcard/
 
-Note: there is no MPC Touch screen needed; the on-screen page in the browser is the panel.
+You do NOT need the Touch Sample app or its installer (.pkg): that is only for a Mac with an MPC Touch
+screen attached. The page in your browser is the MPC panel; use the Desktop shortcut.

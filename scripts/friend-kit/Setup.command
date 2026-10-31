@@ -163,6 +163,6 @@ echo "Start it: double-click 'Start MPC Sample' on your Desktop. Your browser op
 echo "Stop it: click that Terminal window and press Control-C. It saves and shuts down."
 echo "Samples: put WAV files in $TARGET/vendor/virtual-mpc-sample/sdcard/ (make the folder if needed)."
 if [ -d "/Applications/Touch Sample.app" ]; then
-  echo "Note: 'Touch Sample.app' only works with an MPC Touch screen attached. Use the Desktop shortcut instead."
+  echo "Note: 'Touch Sample.app' is not needed without an MPC Touch screen. Use the Desktop shortcut instead."
 fi
 exit 0
