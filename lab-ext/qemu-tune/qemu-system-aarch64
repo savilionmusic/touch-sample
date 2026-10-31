@@ -1,0 +1,18 @@
+#!/bin/bash
+# Trial wrapper: tune the VM without editing vendor source.
+#   TS_QEMU_SMP=N        replace every -smp value (DTB generation and real run stay consistent)
+#   TS_GUEST_IDLE_POLL=1 append "nohlt" to the guest kernel command line, so idle vCPUs poll
+#                        instead of executing WFI. That removes the host sleep/wake round trip
+#                        for each guest timer tick, at the cost of one busy host core per vCPU.
+set -euo pipefail
+args=()
+while (($#)); do
+  if [[ "$1" == '-smp' && -n "${TS_QEMU_SMP:-}" ]]; then
+    args+=('-smp' "$TS_QEMU_SMP"); shift 2
+  elif [[ "$1" == '-append' && "${TS_GUEST_IDLE_POLL:-0}" == 1 ]]; then
+    args+=('-append' "$2 nohlt"); shift 2
+  else
+    args+=("$1"); shift
+  fi
+done
+exec /opt/homebrew/bin/qemu-system-aarch64 "${args[@]}"
