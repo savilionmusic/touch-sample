@@ -62,6 +62,27 @@ html, body {
 .fader .name { position: absolute; left: 0; right: 0; top: 10px; text-align: center; font-size: 15px; color: #e6ebf2; letter-spacing: .06em; pointer-events: none; text-shadow: 0 1px 2px #000; }
 .fader .val { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 26px; color: #fff; font-variant-numeric: tabular-nums; pointer-events: none; text-shadow: 0 1px 3px #000; }
 .fader.active { border-color: var(--amber); }
+
+/* METRO, COUNT-IN and SHIFT ? sit at the right end of the SCREEN row (the page has no free space elsewhere). */
+#screens .btn.tool { flex: 0 0 110px; font-size: 20px; white-space: nowrap; }
+
+#shiftSheet { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; z-index: 100; display: none; padding: 18px 28px 14px;
+  background: #050608; }
+#shiftSheet.on { display: block; }
+#shiftSheet .head { display: flex; justify-content: space-between; align-items: baseline; }
+#shiftSheet h1 { margin: 0; font-size: 32px; letter-spacing: .06em; color: var(--amber); }
+#shiftSheet .close { font-size: 20px; color: var(--muted); }
+#shiftSheet .lead { margin: 4px 0 14px; font-size: 22px; color: #fff; }
+#shiftSheet .cols { display: grid; grid-template-columns: 448px 1fr 1fr; gap: 24px; }
+#shiftSheet h2 { margin: 0 0 8px; font-size: 16px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+#shiftSheet .pads { display: grid; grid-template-columns: repeat(4, 106px); gap: 8px; }
+#shiftSheet .pad { height: 92px; padding: 6px 8px; border-radius: 10px; background: var(--btn); border: 2px solid var(--btn-edge);
+  font-size: 18px; line-height: 1.1; color: #fff; }
+#shiftSheet .pad i { display: block; margin-bottom: 4px; font-style: normal; font-size: 14px; color: var(--amber); }
+#shiftSheet .row { margin-bottom: 9px; padding-bottom: 8px; border-bottom: 1px solid var(--btn-edge); }
+#shiftSheet .row b { display: block; font-size: 15px; letter-spacing: .06em; color: var(--amber); }
+#shiftSheet .row span { display: block; margin-top: 2px; font-size: 20px; line-height: 1.15; color: #fff; }
+#shiftSheet .foot { position: absolute; left: 28px; right: 28px; bottom: 14px; font-size: 16px; font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -76,6 +97,9 @@ html, body {
     <div class="btn" data-name="SCREEN 1">SCREEN 1</div>
     <div class="btn" data-name="SCREEN 2">SCREEN 2</div>
     <div class="btn" data-name="SCREEN 3">SCREEN 3</div>
+    <div class="btn tool" id="btnMetro">METRO</div>
+    <div class="btn tool" id="btnCountIn">COUNT-IN</div>
+    <div class="btn tool" id="btnShiftHelp">SHIFT ?</div>
   </div>
   <div id="right">
     <div id="status">
@@ -109,6 +133,45 @@ html, body {
       <div class="fader" data-name="FADER"><div class="fill"></div><div class="cap"></div><div class="name">FADER</div><div class="val">64</div></div>
       <div class="fader" data-name="MAIN VOLUME"><div class="fill"></div><div class="cap"></div><div class="name">MAIN VOLUME</div><div class="val">100</div></div>
     </div>
+  </div>
+  <div id="shiftSheet">
+    <div class="head"><h1>SHIFT FUNCTIONS</h1><div class="close">tap anywhere to close</div></div>
+    <div class="lead">Hold the SHIFT button on the Touch, then press:</div>
+    <div class="cols">
+      <div>
+        <h2>PADS (numbered from the bottom left)</h2>
+        <div class="pads">
+          <div class="pad"><i>13</i>Trim Sample</div><div class="pad"><i>14</i>Time Correct</div><div class="pad"><i>15</i>Warp</div><div class="pad"><i>16</i>Project</div>
+          <div class="pad"><i>9</i>Fader menu</div><div class="pad"><i>10</i>Rec Quantize</div><div class="pad"><i>11</i>Resample</div><div class="pad"><i>12</i>Song mode</div>
+          <div class="pad"><i>5</i>Compressor</div><div class="pad"><i>6</i>Half Speed</div><div class="pad"><i>7</i>Double Speed</div><div class="pad"><i>8</i>MIDI Config</div>
+          <div class="pad"><i>1</i>Full Level</div><div class="pad"><i>2</i>Half Seq</div><div class="pad"><i>3</i>Double Seq</div><div class="pad"><i>4</i>Count-in</div>
+        </div>
+      </div>
+      <div>
+        <h2>TOUCH BUTTONS AND Q-LINKS</h2>
+        <div class="row"><b>TAP TEMPO</b><span>Metronome Off / On / Record</span></div>
+        <div class="row"><b>PLAY</b><span>Continue from where it stopped</span></div>
+        <div class="row"><b>ERASE</b><span>Copy</span></div>
+        <div class="row"><b>NOTE REPEAT</b><span>Triplet rates</span></div>
+        <div class="row"><b>16 LEVEL</b><span>Type of 16 Levels</span></div>
+        <div class="row"><b>REC</b><span>Recall the last 25 seconds of input</span></div>
+        <div class="row"><b>OVERDUB</b><span>Recall the last loop's pad hits</span></div>
+        <div class="row"><b>Q1 / Q2 / Q3</b><span>Sequence screen: length, time signature, metronome volume</span></div>
+      </div>
+      <div>
+        <h2>ON-SCREEN BUTTONS (tap them)</h2>
+        <div class="row"><b>CHOP / LOOP / MUTE</b><span>Note On / Reverse / Unmute all</span></div>
+        <div class="row"><b>MINUS / PLUS</b><span>Undo / Redo</span></div>
+        <div class="row"><b>SAMPLE / SEQ</b><span>Input Config / Step Edit</span></div>
+        <div class="row"><b>PAD FX / KNOB FX</b><span>Flex Beat / FX Select</span></div>
+        <div class="row"><b>SAMPLE SELECT</b><span>Save Sample</span></div>
+        <div class="row"><b>SCREEN 1 / 2 / 3</b><span>Chop: Extract / Split / Merge. Sample screen: Loop Lock / Normalize</span></div>
+        <h2 style="margin-top:14px">SET BY THE TOUCH APP</h2>
+        <div class="row"><b>PAD BANK A to D</b><span>Banks E to H</span></div>
+        <div class="row"><b>Q4</b><span>Swap FADER and MAIN VOLUME</span></div>
+      </div>
+    </div>
+    <div class="foot">From the MPC Sample guide. METRO and COUNT-IN send TAP TEMPO and pad 4 with SHIFT held for you. A SHIFT held on the Touch plus a tap on this screen is not yet checked on the Touch.</div>
   </div>
 </div>
 <script>
@@ -265,6 +328,38 @@ for (const d of document.querySelectorAll("[data-bank]")) {
   const off = () => d.classList.remove("down");
   d.addEventListener("pointerup", off); d.addEventListener("pointercancel", off); d.addEventListener("pointerleave", off);
 }
+
+// ---------------------------------------------------------------- METRO, COUNT-IN: SHIFT + one Sample control
+// The device does these as SHIFT held + a button (metronome Off/On/Record = SHIFT + TAP TEMPO, count-in = SHIFT + pad 4).
+// Same steps as the on-screen buttons use: SHIFT down, target down, target up, SHIFT up, 30 ms apart, existing control names only.
+const CHORD_GAP_MS = 30;
+let chordBusy = false;
+async function runChord(target, value) {
+  if (chordBusy) return false;                       // one chord at a time, so SHIFT is never doubled or dropped early
+  chordBusy = true;
+  try {
+    act("SHIFT", "press"); await sleep(CHORD_GAP_MS);
+    act(target, "press", value); await sleep(CHORD_GAP_MS);
+    act(target, "release"); await sleep(CHORD_GAP_MS);
+  } finally {
+    act("SHIFT", "release");
+    chordBusy = false;
+  }
+  return true;
+}
+function bindTool(id, fn) {
+  const d = $(id);
+  d.addEventListener("pointerdown", e => { e.preventDefault(); d.classList.add("down"); fn(); });
+  const off = () => d.classList.remove("down");
+  d.addEventListener("pointerup", off); d.addEventListener("pointercancel", off); d.addEventListener("pointerleave", off);
+}
+bindTool("btnMetro", () => { runChord("TAP TEMPO").catch(() => {}); });
+bindTool("btnCountIn", () => { runChord("PAD 4", 127).catch(() => {}); });
+
+// ---------------------------------------------------------------- SHIFT ? sheet: opens on the button, a tap anywhere closes it
+const shiftSheet = $("shiftSheet");
+bindTool("btnShiftHelp", () => shiftSheet.classList.add("on"));
+shiftSheet.addEventListener("pointerdown", e => { e.preventDefault(); shiftSheet.classList.remove("on"); });
 
 // ---------------------------------------------------------------- faders (absolute)
 const faders = [];

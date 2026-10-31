@@ -11,6 +11,10 @@ Touch Sample runs the MPC Sample firmware in an emulator. Keep this project fold
 
 For an audio comparison, stop first, select **Use Chrome for the Touch screen**, and start again. Google Chrome must be installed. Compare its sound and latency with the default WebKit view. The Chrome window uses a separate temporary profile.
 
+## Metronome, count-in and the Shift sheet
+
+Three buttons sit at the right end of the bottom row, after SCREEN 1 to 3 (the SCREEN buttons are narrower to make room). **METRO** steps the Sample's metronome Off, On, Record, as the device does with SHIFT + TAP TEMPO: the page presses SHIFT, taps TAP TEMPO and lets SHIFT go. The Sample's screen names the new state. **COUNT-IN** does the same with pad 4 (SHIFT + pad 4, the one-bar count-in). **SHIFT ?** opens a cheat sheet of what SHIFT plus each pad, Touch button and on-screen button does on the Sample, in plain words; tap anywhere to close it. Don't hold the Touch's SHIFT while you tap METRO or COUNT-IN: the button lets go of SHIFT when it finishes.
+
 ## Stop and save
 
 Click Stop or quit the app. The bridge releases held controls and the emulator receives `lab.py stop` to save before shutting down. Wait for the stop to finish before disconnecting. If the app reports a stop failure, check Terminal; from `vendor/virtual-mpc-sample`, run `python3 lab.py stop` and check its output.

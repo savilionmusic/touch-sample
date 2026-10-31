@@ -69,6 +69,12 @@ SAMPLE 6, SEQ 7, PAD FX 1, KNOB FX 0, CHOP 75, MUTE 43, LOOP 74, SAMPLE SELECT 3
 SCREEN 1–3 = 12–14 (the buttons above the device's screen), FADER CC 20, MAIN VOLUME CC 19, PAD BANK E–H.
 Buttons send `90 id 7F` on press and `80 id 00` on release.
 
+Page-side chords (added 2026-10-31, `/touch` only, no mapping change; they send Sample frames straight from the page, like
+the buttons above): **METRO** = SHIFT (49) down, TAP TEMPO (53) down, TAP TEMPO up, SHIFT up, 30 ms apart (metronome Off /
+On / Record; `90 31 7F`, `90 35 7F`, `80 35 00`, `80 31 00`). **COUNT-IN** = the same with pad 4 (`99 52 7F`, `89 52 00`;
+one-bar count-in). **SHIFT ?** sends nothing: it opens the cheat sheet of Shift combos. All three sit at the right end of the
+SCREEN 1–3 row. Not verified on the Touch hardware.
+
 ## Sample → Touch (lights)
 
 | Sample app sends | Meaning | → Touch | Status |
