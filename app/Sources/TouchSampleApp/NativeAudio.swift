@@ -18,7 +18,24 @@ final class NativeAudio {
     private var framesReceived = 0
     private var peak: Float = 0
     private var underruns = 0
-    private var targetFrames = 2048
+    private var targetFrames = NativeAudio.defaultTarget
+    static let choices = [256, 512, 1024, 2048]
+    static let defaultTarget = 1024
+    static let defaultsKey = "audioTargetFrames"
+    static func label(_ frames: Int) -> String { "\(frames) (\(Int((Double(frames) / 44.1).rounded())) ms)" }
+    /// Drift band around the target: start correcting above `high`, stop at `settle`; stretch side mirrors it, never below 0.
+    static func band(target: Int) -> (high: Int, settle: Int, low: Int, settleLow: Int) {
+        let hi = max(256, target / 2), st = max(128, target / 4)
+        return (target + hi, target + st, max(0, target - hi), max(0, target - st))
+    }
+    /// Live change, safe from any thread. Playback already running just follows the new band.
+    func setTarget(_ frames: Int) {
+        queue.async { [weak self] in
+            guard let self, frames != self.targetFrames else { return }
+            self.targetFrames = frames; self.correcting = 0
+            self.log("NATIVE AUDIO buffer target set to \(frames) frames")
+        }
+    }
     // The guest's audio clock and the Apollo's differ slightly (measured ~140 ppm fast), so the
     // queue drifts once there are no xruns to reset it. Outside this band each packet is resampled
     // by one frame (~0.4 %, linear) until the queue is back near target.
@@ -33,7 +50,11 @@ final class NativeAudio {
         try engine.start()
         let output = engine.outputNode.outputFormat(forBus: 0)
         log("NATIVE AUDIO CoreAudio output \(output.sampleRate) Hz / \(output.channelCount) channels; PCM 44100 Hz stereo")
+        let node = engine.outputNode
+        log("NATIVE AUDIO output presentationLatency=\(Int(node.presentationLatency * 1000)) ms (diagnostic)")
         queue.sync {
+            let saved = UserDefaults.standard.integer(forKey: NativeAudio.defaultsKey)
+            targetFrames = saved > 0 ? saved : NativeAudio.defaultTarget
             active = true
             session = URLSession(configuration: .ephemeral)
             connect()
@@ -107,8 +128,9 @@ final class NativeAudio {
         // Bound latency after host stalls; don't accumulate seconds of stale sound.
         guard queued < 16384, var buffer = Self.decode(packet, format: format) else { return }
         if player.isPlaying {
-            if queued > targetFrames + 1024 { correcting = -1 } else if queued < targetFrames - 1024 { correcting = 1 }
-            else if (correcting < 0 && queued <= targetFrames + 512) || (correcting > 0 && queued >= targetFrames - 512) { correcting = 0 }
+            let b = Self.band(target: targetFrames)
+            if queued > b.high { correcting = -1 } else if queued < b.low { correcting = 1 }
+            else if (correcting < 0 && queued <= b.settle) || (correcting > 0 && queued >= b.settleLow) { correcting = 0 }
             let n = Int(buffer.frameLength)
             if correcting != 0, n > 64, let r = Self.resample(buffer, to: n + correcting, format: format) {
                 buffer = r
@@ -155,6 +177,14 @@ final class NativeAudio {
             precondition(r.floatChannelData![0][0] == 0 && abs(r.floatChannelData![0][size - 1] - 255) < 0.001)
             precondition(abs(r.floatChannelData![1][size / 2] + r.floatChannelData![0][size / 2]) < 0.001)
         }
-        print("Native PCM stereo, endianness, signed amplitude and malformed-frame and drift-resample checks passed (no audio device opened)")
+        for t in choices {
+            let b = band(target: t)
+            precondition(b.high > b.settle && b.settle > t && b.low <= b.settleLow && b.settleLow <= t && b.low >= 0)
+            precondition(b.high - t >= 256 && b.settle - t >= 128)
+        }
+        precondition(band(target: 2048) == (3072, 2560, 1024, 1536) && band(target: 1024) == (1536, 1280, 512, 768))
+        precondition(band(target: 256) == (512, 384, 0, 128) && band(target: 512) == (768, 640, 256, 384))
+        precondition(label(512) == "512 (12 ms)" && label(2048) == "2048 (46 ms)")
+        print("Native PCM stereo, endianness, signed amplitude and malformed-frame and drift-resample and buffer-band checks passed (no audio device opened)")
     }
 }

@@ -25,6 +25,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
     let directTouch = DirectTouchReceiver()
     var screenObserver: NSObjectProtocol?
     var chrome: NSButton!
+    var bufferPopup: NSPopUpButton!
     var bridge: BridgeRunner?
     var nativeAudio: NativeAudio?
     var chromeProcess: Process?
@@ -67,12 +68,20 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
         NSApp.setActivationPolicy(.regular)
         let menu = NSMenu(); let item = NSMenuItem(); menu.addItem(item)
         let submenu = NSMenu(); submenu.addItem(withTitle: "Quit Touch Sample", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); item.submenu = submenu; NSApp.mainMenu = menu
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 240), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 270), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "Touch Sample"; window.center(); window.delegate = self
         let stack = NSStackView(); stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 12; stack.translatesAutoresizingMaskIntoConstraints = false
         status = NSTextField(labelWithString: "Stopped"); stack.addArrangedSubview(status)
         screenStatus = NSTextField(wrappingLabelWithString: "Touch screen: stopped"); screenStatus.preferredMaxLayoutWidth = 600; stack.addArrangedSubview(screenStatus)
         chrome = NSButton(checkboxWithTitle: "Use Chrome for the Touch screen", target: self, action: #selector(saveSetting)); chrome.state = UserDefaults.standard.bool(forKey: "chrome") ? .on : .off; stack.addArrangedSubview(chrome)
+        let bufferRow = NSStackView(); bufferRow.orientation = .horizontal; bufferRow.spacing = 8
+        bufferRow.addArrangedSubview(NSTextField(labelWithString: "Buffer (frames):"))
+        bufferPopup = NSPopUpButton(frame: .zero, pullsDown: false)
+        for frames in NativeAudio.choices { bufferPopup.addItem(withTitle: NativeAudio.label(frames)); bufferPopup.lastItem?.tag = frames }
+        let savedTarget = UserDefaults.standard.integer(forKey: NativeAudio.defaultsKey)
+        bufferPopup.selectItem(withTag: NativeAudio.choices.contains(savedTarget) ? savedTarget : NativeAudio.defaultTarget)
+        bufferPopup.target = self; bufferPopup.action = #selector(bufferChanged)
+        bufferRow.addArrangedSubview(bufferPopup); stack.addArrangedSubview(bufferRow)
         let buttons = NSStackView(); buttons.orientation = .horizontal; buttons.spacing = 10
         buttons.addArrangedSubview(NSButton(title: "Start", target: self, action: #selector(start)))
         buttons.addArrangedSubview(NSButton(title: "Show Touch", target: self, action: #selector(showTouch)))
@@ -89,6 +98,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigation
         else { DispatchQueue.main.async { self.start() } }
     }
     @objc func saveSetting() { UserDefaults.standard.set(chrome.state == .on, forKey: "chrome") }
+    @objc func bufferChanged() {
+        let frames = bufferPopup.selectedItem?.tag ?? NativeAudio.defaultTarget
+        UserDefaults.standard.set(frames, forKey: NativeAudio.defaultsKey)
+        nativeAudio?.setTarget(frames)
+    }
     @objc func soundSettings() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension")!) }
     func screen() -> NSScreen? { NSScreen.screens.first { $0.localizedName.localizedCaseInsensitiveContains("MPC Touch") } ?? NSScreen.screens.first { $0 != NSScreen.screens.first && Int($0.frame.width) == 1280 && Int($0.frame.height) == 800 } }
     func note(_ message: String) {
