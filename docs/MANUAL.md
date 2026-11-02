@@ -52,3 +52,14 @@ For a friend with an Apple Silicon Mac and their own "MPC Sample 1.3.0 Updater" 
 **Make the kit (Sav):** commit your changes, then run `scripts/make-friend-kit.sh`. It needs `vendor/virtual-mpc-sample/out/kernel/Image` and `out/bridge/mpclab-audio-bridge` (build them once with `lab.py build kernel bridge`). It writes `dist/Touch Sample Kit.zip` and refuses to build if a firmware file, disk image, key or SD card file is found, or if any file matches `inputs.sha256`. Send the zip.
 
 **Friend:** put the Akai updater (.zip or .app) on the Desktop, unzip the kit, right-click `Setup.command` and Open. It installs Homebrew and tools if missing, unpacks the project to `~/Documents/Codex/TouchSample`, clones the two emulator repositories at their pinned commits, extracts the firmware, builds the images (30-60 minutes) and puts `Start MPC Sample.command` on the Desktop. Running Setup again resumes. Samples go in `vendor/virtual-mpc-sample/sdcard/`. The Touch Sample app is for a Mac with an MPC Touch attached; the friend uses the Desktop shortcut and the browser page.
+
+## Pad-bank startup feedback
+
+If no bank indicator has arrived after a fresh emulator boot, pressing a Touch bank
+button now sends one virtual PAD BANK press to obtain the current bank. The bridge
+then follows the reported LEDs to the requested A–D (or Shift + A–D for E–H) bank.
+If feedback never arrives, it releases the button and stops instead of guessing.
+
+Diagnosed 2026-11-02: the running bridge received bank presses but logged that no
+LED 57–64 was lit. A virtual PAD BANK press produced LED 58 = 127 (bank B).
+This is a bridge startup-state issue; no controller mapping or driver change is needed.

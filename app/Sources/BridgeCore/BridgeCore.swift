@@ -474,14 +474,21 @@ public final class BridgeCore {
 
     private func walkStep(_ out: inout [Effect]) {
         guard var w = walk else { return }
-        guard let cur = currentBank() else {
-            out.append(.log("bank walk: the Sample's current bank is unknown (no LED 57-64 lit); not pressing"))
+        let cur = currentBank()
+        // A fresh firmware boot may not emit bank LEDs until PAD BANK is pressed.
+        // Probe once, then use real feedback to reach the requested bank. Never
+        // assume A, since this bridge can attach to an already-running project.
+        if cur == nil && w.presses > 0 {
+            out.append(.log("bank walk: no bank feedback after initial PAD BANK press; stopping"))
             finishWalk(&out)
             return
         }
+        if cur == nil {
+            out.append(.log("bank walk: requesting initial bank feedback with one PAD BANK press"))
+        }
         if cur == w.target { finishWalk(&out); return }
         if w.presses >= 8 {
-            out.append(.log("bank walk: gave up after 8 PAD BANK presses (wanted bank \(w.target), Sample shows \(cur))"))
+            out.append(.log("bank walk: gave up after 8 PAD BANK presses (wanted bank \(w.target), Sample shows \(cur.map(String.init) ?? "unknown"))"))
             finishWalk(&out)
             return
         }

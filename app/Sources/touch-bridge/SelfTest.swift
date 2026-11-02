@@ -384,6 +384,28 @@ private func checkWheelAndButtons() throws {
 }
 
 private func checkBanks() throws {
+    // Actual firmware can omit all bank LEDs until the first PAD BANK press.
+    for initialBank in 0..<8 {
+        let cold = try fresh("bank unknown at startup \(initialBank)", bankFeedback: true)
+        cold.bank = initialBank
+        cold.sampleEvent(.hello(leds: [:], pads: [:], vm: true))
+        cold.pub("90 23 7F") // request A without assuming the firmware started on A
+        cold.advance(3000)
+        cold.pub("80 23 00")
+        ck("unknown initial bank \(initialBank) reaches A using feedback",
+           cold.bank == 0 && cold.bankPresses <= 8 && cold.bankPresses >= 1
+               && cold.bankPresses == cold.bankReleases,
+           "bank=\(cold.bank) presses=\(cold.bankPresses) releases=\(cold.bankReleases)")
+    }
+    let silent = try fresh("bank unknown and silent", bankFeedback: false)
+    silent.sampleEvent(.hello(leds: [:], pads: [:], vm: true))
+    silent.pub("90 25 7F")
+    silent.advance(3000)
+    silent.pub("80 25 00")
+    ck("unknown bank without feedback stops after one released probe",
+       silent.bankPresses == 1 && silent.bankReleases == 1
+           && silent.logs.contains { $0.contains("no bank feedback after initial") })
+
     // A -> C with simulated LED feedback
     let s = try fresh("bank A->C", bankFeedback: true)
     var m = s.mark()
