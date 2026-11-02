@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare personal audio as <=440 MiB cards without modifying source files.
+"""Prepare personal audio for one 4 GiB card without modifying source files.
 
 Requires ffmpeg/ffprobe for conversion. Card libraries and reports live in ignored out/.
 Preparing never changes the mounted folder; activate explicitly after preparing.
@@ -17,7 +17,7 @@ import wave
 ROOT = Path(__file__).resolve().parents[1]
 LAB = ROOT / "vendor/virtual-mpc-sample"
 LIBRARY = ROOT / "out/sample-cards"
-LIMIT = 440 * 1024 * 1024  # leave FAT/directory overhead below vvfat's ~500 MB limit
+LIMIT = (4 << 30) - (256 << 20)
 AUDIO = {".wav", ".aif", ".aiff", ".mp3", ".flac", ".ogg", ".snd"}
 
 
@@ -88,16 +88,11 @@ def build(sources):
                     print(f"Prepared {i}/{len(files)}", flush=True)
         cards = Path(temp) / "cards"
         cards.mkdir()
-        number, size, group = 0, LIMIT, None
+        size = 0
         for record in records:
-            # Keep the two supplied collections on separate cards.
-            current_group = Path(record["path"]).parts[0]
-            if record["bytes"] > LIMIT:
-                raise ValueError(f"One file exceeds card limit: {record['source']}")
-            if size + record["bytes"] > LIMIT or current_group != group:
-                number += 1
-                size, group = 0, current_group
-            card = f"card-{number:02d}"
+            if size + record["bytes"] > LIMIT:
+                raise ValueError("Collection exceeds the 4 GiB card's safe capacity")
+            card = "all"
             relative = Path("MPC-Sample/Samples") / record["path"]
             target = cards / card / relative
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -106,20 +101,35 @@ def build(sources):
             size += record["bytes"]
         (cards / "manifest.json").write_text(json.dumps({"files": records, "skipped": skipped}, indent=2))
         cards.rename(LIBRARY)
-    print(f"Prepared {len(records)} files across {number} cards in {LIBRARY}")
+    print(f"Prepared {len(records)} files on one card in {LIBRARY}")
 
 
 def activate(card):
-    if Path(card).name != card or not card.startswith("card-"):
-        raise ValueError("Use a card name such as card-01")
+    if Path(card).name != card or (card != "all" and not card.startswith("card-")):
+        raise ValueError("Use all (or a legacy card name such as card-01)")
     source = LIBRARY / card
-    if not source.is_dir():
+    combine = card == "all" and not source.is_dir() and (LIBRARY / "manifest.json").exists()
+    if not source.is_dir() and not combine:
         raise ValueError(f"No prepared card: {source}")
     destination = LAB / "sdcard"
     # Stage before replacing; preserve the previous host folder, including user additions.
     with tempfile.TemporaryDirectory(prefix="activate-", dir=LIBRARY.parent) as temp:
         staged = Path(temp) / "sdcard"
-        shutil.copytree(source, staged)
+        if combine:
+            # Reuse already converted files from the original split-card import.
+            staged.mkdir()
+            manifest = json.loads((LIBRARY / "manifest.json").read_text())
+            for row in manifest["files"]:
+                relative = Path(row["card_path"])
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError(f"Invalid manifest path: {relative}")
+                target = staged / relative
+                if target.exists():
+                    raise ValueError(f"Output collision: {relative}")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(LIBRARY / row["card"] / relative, target)
+        else:
+            shutil.copytree(source, staged)
         if destination.exists():
             backup = LIBRARY.parent / f"sdcard-backup-{time.time_ns()}"
             destination.rename(backup)

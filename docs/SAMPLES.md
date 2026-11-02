@@ -1,4 +1,4 @@
-# Loading Sav's samples
+# Loading Sav’s samples
 
 The host SD-card folder is:
 
@@ -6,77 +6,103 @@ The host SD-card folder is:
 /Users/savmacbook/Documents/Codex/TouchSample/vendor/virtual-mpc-sample/sdcard/
 ```
 
-Confirmed against `scripts/run-lab.command` (changes into the pinned vendor folder) and
-`vendor/virtual-mpc-sample/lab.py` (`SDCARD`, `sdcard_image`, and `qemu_cmd`). QEMU attaches
-`out/run/sdcard.img` via `sdhci-pci`/`sd-card`; the guest mounts its partition at
+Confirmed against `scripts/run-lab.command` and the pinned vendor `lab.py`’s
+`SDCARD` definition. QEMU attaches `vendor/virtual-mpc-sample/out/run/sdcard.img`
+through `sdhci-pci` and `sd-card`. The guest mounts partition `/dev/mmcblk1p1` at
 `/media/MPC SAMPLE`. The host folder is copied into an image, not shared live.
+
+## One larger card
+
+Sav requested one card for the complete library on 2026-11-02. The local
+`lab-ext/sample_card.py` extension builds a 4 GiB FAT32 image with an MBR partition,
+labelled `MPC SAMPLE`. It leaves at least 256 MiB for filesystem overhead and saves.
+It writes only project-local image files; it never mounts or formats a Mac disk.
+
+The unchanged vendor builder has a roughly 500 MB FAT16 limit. Our Terminal launcher
+runs `lab-ext/run-lab.py`, which installs the larger builder before running the stock
+lab CLI. `panel-ext/touch_server.py` installs the same builder for virtual SD inserts.
+The vendor submodule and Akai firmware remain unchanged. Running the vendor CLI directly
+bypasses this extension; use the project launcher to start the emulator.
+
+Dependencies are pinned in `lab-ext/sample-card-requirements.txt` and installed locally:
+
+```sh
+python3 -m pip install --target out/sample-tools -r lab-ext/sample-card-requirements.txt
+```
+
+Run commands from `/Users/savmacbook/Documents/Codex/TouchSample`.
 
 ## Formats and browsing
 
 Akai documents WAV, MP3, AIF/AIFF, SND, S1S, S3S, FLAC and OGG imports, with
 16/24-bit audio at 44.1, 48 or 96 kHz. WAV PCM at 16/24-bit and 44.1/48 kHz is
-the conservative choice for this setup. Sav Kit's 24 kHz files need conversion.
+the conservative choice for this setup. Sav Kit’s 24 kHz files were converted.
 
-Press SAMPLE SELECT, then B2 (the second SCREEN button) to select External. The browser
-defaults to `MPC-Sample/Samples`; turn the encoder to select a folder and press it to open.
-B1 goes back. Other folders on the card can also be browsed; a special kit format is
-not required for loose samples.
+Press SAMPLE SELECT, then B2 (the second SCREEN button) to select External. The
+browser defaults to `MPC-Sample/Samples`: open `Sav Kit` or `Compositions`. Turn the
+encoder to select a folder and press it to open. B1 goes back. Other card directories
+can also be browsed; loose samples do not need a special kit format.
 
 Sources checked 2026-11-02:
 
 - [Akai technical specifications](https://www.akaipro.com/guides/mpc-sample/technical_specifications.htm)
 - [Akai sample loading guide](https://www.akaipro.com/guides/mpc-sample/loading_and_saving_samples.htm)
-- Pinned emulator `docs/PANEL.md`, SD card section, and `lab.py` implementation.
+- Pinned emulator `docs/PANEL.md` (SD card section) and `lab.py`.
 
-## Importing and switching cards
+## Importing
 
-The pinned builder makes a roughly 500 MB FAT16 card. The two supplied collections
-exceed that, especially after converting 24 kHz files. The helper splits them into
-cards limited to 440 MiB of audio, preserving their folder structure. It leaves
-compatible WAVs intact and converts other audio to PCM 16-bit/44.1 kHz without
-normalization. It preserves mono/stereo and refuses multichannel downmixing. Original
-Dropbox files are never changed. WDT and other non-audio sidecars are skipped.
+All 5,053 audio files from Dropbox’s `DRUMS 2018/Sav Kit` and `Compositions` were
+prepared: 4,997 converted, 56 compatible WAVs copied unchanged, and 86 non-audio
+sidecars/metadata entries skipped. Dropbox originals remain unchanged. Subfolders
+are preserved; non-WAV extensions are retained before `.wav` to preserve alternate
+versions (for example `Name.mp3.wav`). The helper preserves mono/stereo and refuses
+multichannel downmixing. It does not normalize audio.
 
-From `/Users/savmacbook/Documents/Codex/TouchSample`:
+The complete library is active in `sdcard/MPC-Sample/Samples/`. The initial split
+library and import manifest remain in ignored `out/sample-cards/` as a local backup.
+To restore the full prepared collection to the host folder:
 
 ```sh
-python3 scripts/import-samples.py "/Users/savmacbook/Dropbox/DRUMS 2018/Sav Kit" "/Users/savmacbook/Dropbox/Compositions"
-python3 scripts/import-samples.py --activate card-01
+python3 scripts/import-samples.py --activate all
 ```
 
-Preparation writes `out/sample-cards/card-01`, `card-02`, etc., and a local
-`manifest.json` listing every source, destination, conversion and skipped file.
-It refuses to overwrite an existing prepared library. Non-WAV extensions are retained
-before `.wav` (for example `Name.mp3.wav`) to preserve alternate versions.
+Activation preserves the previous host folder in `out/sdcard-backup-<timestamp>`.
+It does not change a running guest’s card image. Preparation refuses to overwrite an
+existing library. For a new library, preserve/rename `out/sample-cards/`, then run:
 
-Activation copies a prepared card to the mounted host folder. It preserves the previous
-host folder as `out/sdcard-backup-<timestamp>`. It does not eject a running card or modify
-the existing card image. To switch, run the activation command with another card number,
-then refresh the virtual card as described below. All samples, cards, manifests and
-backups stay git-ignored. Only the helper and documentation belong in git.
+```sh
+python3 scripts/import-samples.py /path/to/sample-folder
+python3 scripts/import-samples.py --activate all
+```
 
-### Prepared library (2026-11-02)
+New imports prepare one collection under `out/sample-cards/all/`. The manifest records
+source paths, conversions and skipped files. All samples, dependencies, images, manifests
+and backups remain git-ignored. No firmware, factory content or personal samples go in git.
 
-All 5,053 audio files were imported: 4,997 converted and 56 copied unchanged.
-The 86 skipped entries were non-audio sidecars/metadata. Cards 01–04 contain
-Sav Kit (1,217 / 1,242 / 2,049 / 469 files); cards 05–07 contain Compositions
-(38 / 24 / 14 files). Folder paths remain within each collection. Card 01 is
-the initial active host folder.
+## Refreshing
 
-Every output WAV header was checked for the expected PCM format, mono/stereo and
-44.1/48 kHz rate. All seven card folders successfully built with QEMU's vvfat FAT16
-builder. No emulator/controller playback test was performed.
+No emulator restart is required. After adding files, use the SD slot on the stock
+panel at `http://127.0.0.1:8765/`: eject if inserted, then insert. The project panel
+rebuilds the full FAT32 card. Wait for copying to finish; progress appears in Terminal.
 
-## Refreshing the card
+Save guest SD-card work elsewhere before reinserting: the previous image is replaced.
+The image survives a normal restart, so restarting alone does not refresh newly added
+host files. On the first launch with no image, the project launcher builds one from
+the nonempty host folder. Failed builds preserve the previous image.
 
-No emulator restart is required. After adding files or activating another card, use the
-SD slot on the stock browser panel at `http://127.0.0.1:8765/`: eject if inserted, then
-insert. This rebuilds the card from the host folder.
+Start the emulator through Terminal.app with `scripts/run-lab.command`. Do not start
+it from an agent shell. Stop normally through Touch Sample’s save/quit workflow.
 
-**Save anything created on the guest SD card elsewhere before reinserting:** the
-previous image is replaced. The image survives a normal restart, so restarting alone
-does not refresh newly added host files. On a first launch with no existing image,
-the launcher creates one from the nonempty host folder.
+## Validation (2026-11-02)
 
-If the emulator is stopped, start it from Terminal.app using the existing
-`scripts/run-lab.command` workflow. Do not start it from an agent shell.
+All 5,053 image files matched their host SHA-256 hashes. The extracted partition
+passed macOS `fsck_msdos -n` without filesystem errors (about 1.4 GiB free).
+Real-image tests cover MBR geometry, the volume label, nested Unicode filenames,
+file contents, and preservation of the previous image after a failed copy. Run
+`python3 scripts/test-sample-card.py`; the panel self-test also passed.
+
+The emulator was started through Terminal.app. Guest verification confirmed
+`/dev/mmcblk1p1` mounted read/write as vfat at `/media/MPC SAMPLE`, a 4.0G
+filesystem with 2.6G used and 1.4G available. Both `Sav Kit` and `Compositions`
+appeared under `MPC-Sample/Samples`, containing all 5,053 imported files.
+The controller bridge was not started, and sample auditioning remains untested.

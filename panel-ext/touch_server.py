@@ -24,6 +24,9 @@ VENDOR = os.path.normpath(os.path.join(HERE, "..", "vendor", "virtual-mpc-sample
 sys.path.insert(0, VENDOR)
 sys.path.insert(0, os.path.join(VENDOR, "panel"))
 import server  # noqa: E402  (the stock panel server)
+sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..", "lab-ext")))
+import sample_card  # noqa: E402
+sample_card.install(server.lab)
 
 TOUCH_HTML = os.path.join(HERE, "touch.html")
 BUFFER_JS = os.path.join(HERE, "buffer_select.js")
