@@ -63,3 +63,17 @@ If feedback never arrives, it releases the button and stops instead of guessing.
 Diagnosed 2026-11-02: the running bridge received bank presses but logged that no
 LED 57–64 was lit. A virtual PAD BANK press produced LED 58 = 127 (bank B).
 This is a bridge startup-state issue; no controller mapping or driver change is needed.
+
+## All touchscreen controls ignore taps
+
+The receiver accepts both the legacy 24-byte and current 32-byte packets from the
+installed driver. Diagnosed 2026-11-02: the driver was running and reporting touches,
+but the app rejected every packet because it required exactly 24 bytes. The installed
+driver binary matched the existing v3 reference (SHA-256
+`3ff888bc4279ae0f5455c27fec67e0a058e73547e4811e2878604036ad02cd8d`), whose
+protocol appends an eight-byte pinch scale. Only Touch Sample’s receiver was changed.
+After updating the app, quit normally to save, then reopen it. No driver rebuild,
+permission reset, kext change or DisplayLink change is required for this mismatch.
+
+The embedded stock MPC LCD remains a display image. Use the surrounding touch
+buttons and hardware encoder to navigate the firmware’s browser.

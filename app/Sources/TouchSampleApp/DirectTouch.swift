@@ -10,8 +10,13 @@ final class DirectTouchReceiver {
         let x: Double
         let y: Double
         init?(_ data: Data) {
-            guard data.count == 24 else { return nil }
-            type = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: Int32.self) }
+            // Current mpc_touchd appends a Double pinch scale (32 bytes total).
+            // Keep accepting the older 24-byte pointer packet as well.
+            guard data.count == 24 || data.count == 32 else { return nil }
+            let rawType = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: Int32.self) }
+            // A pinch takes over the first finger; release any held UI control.
+            // Pinch steps/end have no pointer action in this app.
+            type = data.count == 32 && rawType == 4 ? 3 : rawType
             x = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 8, as: Double.self) }
             y = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 16, as: Double.self) }
             guard (1...3).contains(type), x.isFinite, y.isFinite else { return nil }
@@ -70,12 +75,27 @@ final class DirectTouchReceiver {
         }
         let frame = NSRect(x: 2287, y: -1880, width: 1280, height: 800)
         precondition(Packet(Data(repeating: 0, count: 23)) == nil)
+        precondition(Packet(Data(repeating: 0, count: 25)) == nil)
+        precondition(Packet(Data(repeating: 0, count: 31)) == nil)
+        precondition(Packet(Data(repeating: 0, count: 33)) == nil)
         precondition(Packet(data(4, 0, 0)) == nil)
         precondition(Packet(data(1, .nan, 0)) == nil)
         for type: Int32 in [1, 2, 3] {
             precondition(Packet(data(type, 2287, 2160))!.point(primaryTop: 1080, frame: frame) == .zero)
             precondition(Packet(data(type, 3567, 2960))!.point(primaryTop: 1080, frame: frame) == NSPoint(x: 1280, y: 800))
+            var extended = data(type, 2400, 2400)
+            var scale = 1.0
+            extended.append(withUnsafeBytes(of: &scale) { Data($0) })
+            let packet = Packet(extended)!
+            precondition(packet.type == type && packet.x == 2400 && packet.y == 2400)
+            precondition(packet.point(primaryTop: 1080, frame: frame) == NSPoint(x: 113, y: 240))
         }
-        print("Direct touch packet and multi-display coordinate checks passed (no hardware or message port opened)")
+        let padding = Data(repeating: 0, count: 8)
+        precondition(Packet(data(4, 0, 0) + padding)?.type == 3)
+        precondition(Packet(data(5, 0, 0) + padding) == nil)
+        precondition(Packet(data(6, 0, 0) + padding) == nil)
+        precondition(Packet(data(1, .nan, 0) + padding) == nil)
+        precondition(Packet(data(1, 0, .infinity) + padding) == nil)
+        print("Direct touch 24/32-byte packets, pinch release and multi-display coordinate checks passed (no hardware or message port opened)")
     }
 }
