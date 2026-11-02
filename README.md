@@ -1,5 +1,7 @@
 # Touch Sample
 
+![Touch Sample — SAV LAB](assets/touch-sample.png)
+
 **Free from SAV LAB** · Apple Silicon Mac · MPC Touch
 
 Touch Sample is an independent project and is not affiliated with Akai Professional.
@@ -10,10 +12,10 @@ stock firmware inside an emulator. It does not install firmware onto your MPC To
 ### First-time setup
 
 1. Download the official **MPC Sample 1.3.0 Updater for Mac** from [Akai's downloads page](https://www.akaipro.com/downloads-and-support/downloads/?product=MPC%20Sample). Put the downloaded updater ZIP or app on your **Desktop**. Do not run the updater.
-2. Download and unzip the Touch Sample setup kit. Control-click `Setup.command`, select **Open**, then follow the Terminal prompts. macOS may require **System Settings → Privacy & Security → Open Anyway** for a downloaded, unsigned app. Only open software you trust.
+2. Download and run the Touch Sample `.pkg` installer. Then open **Applications → Touch Sample Setup → Setup.command** in Terminal and follow its prompts. macOS may require **System Settings → Privacy & Security → Open Anyway** for a downloaded, unsigned app. Only open software you trust.
 3. Setup installs required tools, extracts the supplied firmware locally and builds the emulator and Touch Sample app. Leave Terminal open; the initial build can take a while and may request your Mac password.
 4. Install and configure your MPC Touch's display and touch software separately. If the existing touch driver requests access, enable it under **System Settings → Privacy & Security → Accessibility**. DisplayLink Manager may request **Screen & System Audio Recording** permission. macOS names and prompts can vary by version.
-5. Connect the Touch and open `Documents/Codex/TouchSample/dist/Touch Sample.app`. Quit other controller apps that use the Touch first. Save and quit normally when finished.
+5. Connect the Touch and open **Touch Sample** in Applications. Quit other controller apps that use the Touch first. Save and quit normally when finished.
 
 The updater is Akai's software and must be obtained separately. This project is
 free, but does not grant rights to redistribute the updater, firmware, factory
@@ -104,3 +106,5 @@ node scripts/test-direct-touch.cjs
 The bridge suite passed 172 checks after the bank fix. The app self-test checks
 touch packet formats and coordinates, native PCM handling and project-folder
 resolution without opening hardware. Physical playing and listening remain manual.
+
+The Alicja Hand heading artwork is copyright 2026 Alicja Gajewski, used for SAV LAB branding. The font files are not distributed by this repository.

@@ -109,15 +109,6 @@ else
   clone_at "$SLAB_URL" "$TARGET/vendor/mpc-sample-lab" "$SLAB_COMMIT"
   mkdir -p "$TARGET/vendor/virtual-mpc-sample/overlay/lab-layer/root/.ssh"
 
-  # f. Prebuilt open-source pieces
-  say "Copying the prebuilt kernel and audio bridge (open source, no Akai content)"
-  mkdir -p "$OUT/kernel" "$OUT/bridge"
-  [ -f "$KIT/prebuilt/kernel/Image" ] || fail "prebuilt/kernel/Image is missing from the kit."
-  [ -f "$KIT/prebuilt/bridge/mpclab-audio-bridge" ] || fail "prebuilt/bridge/mpclab-audio-bridge is missing from the kit."
-  cp "$KIT/prebuilt/kernel/Image" "$OUT/kernel/Image"
-  cp "$KIT/prebuilt/bridge/mpclab-audio-bridge" "$OUT/bridge/mpclab-audio-bridge"
-  chmod +x "$OUT/bridge/mpclab-audio-bridge"
-
   # g. Firmware from the friend's own updater
   say "Looking for your MPC Sample 1.3.0 Updater"
   if ! UPDATER="$(find_updater "${1:-}")"; then
@@ -138,7 +129,7 @@ else
     colima start --cpu 4 --memory 4
     COLIMA_STARTED=1
   fi
-  ( cd "$TARGET/vendor/virtual-mpc-sample" && python3 lab.py build images )
+  ( cd "$TARGET/vendor/virtual-mpc-sample" && python3 lab.py build kernel bridge images )
   if [ "$COLIMA_STARTED" = 1 ]; then colima stop; COLIMA_STARTED=0; fi
 fi
 
@@ -148,7 +139,7 @@ python3 -m pip install --target "$TARGET/out/sample-tools" -r "$TARGET/lab-ext/s
 
 # Build the native controller app locally, using this Mac's project path.
 say "Building Touch Sample for the MPC Touch"
-"$TARGET/scripts/build-app.sh"
+if [ ! -d "/Applications/Touch Sample.app" ]; then "$TARGET/scripts/build-app.sh"; fi
 echo "The app is at $TARGET/dist/Touch Sample.app"
 
 # i. Desktop shortcut
