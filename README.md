@@ -1,5 +1,24 @@
 # Touch Sample
 
+**Free from SAV LAB** · Apple Silicon Mac · MPC Touch
+
+Touch Sample is an independent project and is not affiliated with Akai Professional.
+The download contains neither the Akai firmware nor the factory sound library.
+You supply the official updater yourself; setup extracts it locally to run the
+stock firmware inside an emulator. It does not install firmware onto your MPC Touch.
+
+### First-time setup
+
+1. Download the official **MPC Sample 1.3.0 Updater for Mac** from [Akai's downloads page](https://www.akaipro.com/downloads-and-support/downloads/?product=MPC%20Sample). Put the downloaded updater ZIP or app on your **Desktop**. Do not run the updater.
+2. Download and unzip the Touch Sample setup kit. Control-click `Setup.command`, select **Open**, then follow the Terminal prompts. macOS may require **System Settings → Privacy & Security → Open Anyway** for a downloaded, unsigned app. Only open software you trust.
+3. Setup installs required tools, extracts the supplied firmware locally and builds the emulator and Touch Sample app. Leave Terminal open; the initial build can take a while and may request your Mac password.
+4. Install and configure your MPC Touch's display and touch software separately. If the existing touch driver requests access, enable it under **System Settings → Privacy & Security → Accessibility**. DisplayLink Manager may request **Screen & System Audio Recording** permission. macOS names and prompts can vary by version.
+5. Connect the Touch and open `Documents/Codex/TouchSample/dist/Touch Sample.app`. Quit other controller apps that use the Touch first. Save and quit normally when finished.
+
+The updater is Akai's software and must be obtained separately. This project is
+free, but does not grant rights to redistribute the updater, firmware, factory
+sounds, or third-party trademarks. Use your own samples as described below.
+
 Run stock Akai MPC Sample firmware 1.3.0.12 in QEMU, controlled by an MPC Touch.
 The native Mac app provides the controller bridge, lights, touchscreen controls and
 audio. The emulator is the pinned

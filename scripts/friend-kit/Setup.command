@@ -142,6 +142,15 @@ else
   if [ "$COLIMA_STARTED" = 1 ]; then colima stop; COLIMA_STARTED=0; fi
 fi
 
+# The project launcher uses the FAT32 card builder, including when the card is empty.
+say "Installing the local SD-card tools"
+python3 -m pip install --target "$TARGET/out/sample-tools" -r "$TARGET/lab-ext/sample-card-requirements.txt"
+
+# Build the native controller app locally, using this Mac's project path.
+say "Building Touch Sample for the MPC Touch"
+"$TARGET/scripts/build-app.sh"
+echo "The app is at $TARGET/dist/Touch Sample.app"
+
 # i. Desktop shortcut
 say "Creating the Desktop shortcut"
 SHORTCUT="$HOME/Desktop/Start MPC Sample.command"
@@ -162,6 +171,7 @@ say "All done!"
 echo "Start it: double-click 'Start MPC Sample' on your Desktop. Your browser opens the MPC screen."
 echo "Stop it: click that Terminal window and press Control-C. It saves and shuts down."
 echo "Samples: put WAV files in $TARGET/vendor/virtual-mpc-sample/sdcard/ (make the folder if needed)."
+echo "MPC Touch: open $TARGET/dist/Touch Sample.app after installing your existing touch driver and DisplayLink."
 if [ -d "/Applications/Touch Sample.app" ]; then
   echo "Note: 'Touch Sample.app' is not needed without an MPC Touch screen. Use the Desktop shortcut instead."
 fi
