@@ -18,7 +18,7 @@ Sample instrument tool, version 0.7.1.
   and Codex as project context. A stale AGENTS.md is worse than none.
 
 ## Notes, status and gotchas
-- Current branch `codex/public-release-setup`, no upstream set. Clean at last check.
+- Current branch `main` (no upstream tracking configured; GitHub `main` is at the same commit). Clean at last check.
 
 ---
 Keep this file current. It is auto-loaded as context for any Hermes, Codex or Claude Code session
